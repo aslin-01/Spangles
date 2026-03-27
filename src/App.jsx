@@ -25,8 +25,9 @@ export default function App() {
         {/* ADMIN PAGES */}
         <Route
           path="/dashboard"
-          element={
+          element={  
             <PrivateRoute>
+              
               <Bill />
             </PrivateRoute>
           }
