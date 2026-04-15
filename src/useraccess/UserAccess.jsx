@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FaPlus, FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaPlus, FaEye, FaEyeSlash, FaChevronLeft, FaChevronRight, FaSearch } from "react-icons/fa";
 import { HiOutlineTrash } from "react-icons/hi";
 
 /* ---------------- CUSTOM BILL-STYLE TOAST ---------------- */
@@ -27,7 +27,8 @@ const ACCESS_LIST = [
   { key: "gallery", label: "Gallery" },
   { key: "applicants", label: "Applicants" },
   { key: "invoice", label: "Invoice" },
-  { key: "quotation", label: "Quotation" }
+  { key: "quotation", label: "Quotation" },
+  { key: "enquiries", label: "Enquiries" }
 ];
 
 const emptyAccess = {
@@ -36,7 +37,8 @@ const emptyAccess = {
   gallery: false,
   applicants: false,
   invoice: false,
-  quotation: false
+  quotation: false,
+  enquiries: false
 };
 
 const fullAccess = {
@@ -45,7 +47,8 @@ const fullAccess = {
   gallery: true,
   applicants: true,
   invoice: true,
-  quotation: true
+  quotation: true,
+  enquiries: true
 };
 
 const isFullAccess = (access = {}) =>
@@ -59,6 +62,12 @@ export default function UserAccess() {
   const [selectedUser, setSelectedUser] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
   const [toastMsg, setToastMsg] = useState(null);
+
+  /* PAGINATION STATE */
+  const [currentPage, setCurrentPage] = useState(1);
+  const [recordsPerPage, setRecordsPerPage] = useState(50);
+  const [jumpPage, setJumpPage] = useState("");
+  const [rowsInput, setRowsInput] = useState(50);
 
   const [form, setForm] = useState({
     name: "",
@@ -121,6 +130,56 @@ export default function UserAccess() {
       u.username.toLowerCase().includes(search.toLowerCase())
   );
 
+  /* PAGINATION LOGIC */
+  const indexOfLastRecord = currentPage * recordsPerPage;
+  const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
+  const currentUsers = filteredUsers.slice(indexOfFirstRecord, indexOfLastRecord);
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / recordsPerPage));
+
+  const getPageNumbers = () => {
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 4) {
+        for (let i = 1; i <= 5; i++) pages.push(i);
+        pages.push("...");
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 3) {
+        pages.push(1);
+        pages.push("...");
+        for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push("...");
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push("...");
+        pages.push(totalPages);
+      }
+    }
+    return pages;
+  };
+
+  const handleJumpPage = (e) => {
+    if (e.key === "Enter") {
+      const p = parseInt(jumpPage);
+      if (p >= 1 && p <= totalPages) {
+        setCurrentPage(p);
+        setJumpPage("");
+      }
+    }
+  };
+
+  const handleRowsChange = (e) => {
+    const val = e.target.value;
+    setRowsInput(val);
+    const n = parseInt(val);
+    if (!isNaN(n) && n > 0) {
+      setRecordsPerPage(n);
+      setCurrentPage(1);
+    }
+  };
+
   const handlePhoneChange = (e) => {
     const value = e.target.value.replace(/\D/g, "");
     if (value.length <= 10) {
@@ -180,9 +239,9 @@ export default function UserAccess() {
               </thead>
 
               <tbody>
-                {filteredUsers.map((u, i) => (
+                {currentUsers.map((u, i) => (
                   <tr key={u._id} className="border-b hover:bg-gray-50">
-                    <td className="py-4">{String(i + 1).padStart(2, "0")}</td>
+                    <td className="py-4">{String(indexOfFirstRecord + i + 1).padStart(2, "0")}</td>
                     <td>{u.name}</td>
                     <td>{u.phone}</td>
                     <td>{u.username}</td>
@@ -206,8 +265,80 @@ export default function UserAccess() {
                   </tr>
                 ))}
               </tbody>
-
             </table>
+
+            {/* Pagination Section - Now Inside Table Container */}
+            {filteredUsers.length >= 10 && (
+              <div className="flex items-center justify-between p-4 bg-white border-t border-gray-100 text-[#345261]">
+                {/* No. of Rows */}
+                <div className="flex items-center gap-3 bg-[#f8fafc] px-4 py-2 rounded-xl border border-gray-100">
+                  <span className="text-sm font-medium text-gray-500 whitespace-nowrap">No. of Rows</span>
+                  <div className="relative flex items-center">
+                    <input
+                      type="text"
+                      value={rowsInput}
+                      onChange={handleRowsChange}
+                      className="w-16 px-3 py-1.5 border rounded-lg outline-none text-sm text-center bg-white border-gray-200 focus:border-[#345261] transition-all font-medium"
+                    />
+                    <FaSearch className="absolute right-2 text-gray-300 pointer-events-none" size={10} />
+                  </div>
+                </div>
+
+                {/* Navigation Pagers */}
+                <div className="flex items-center gap-6">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-all font-medium"
+                  >
+                    <FaChevronLeft size={12} />
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    {getPageNumbers().map((num, i) => (
+                      <button
+                        key={i}
+                        onClick={() => typeof num === "number" && setCurrentPage(num)}
+                        disabled={num === "..."}
+                        className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-semibold transition-all ${
+                          currentPage === num
+                            ? "bg-[#345261] text-white shadow-md transform scale-105"
+                            : num === "..."
+                            ? "cursor-default text-gray-400"
+                            : "hover:bg-gray-50 text-gray-600 active:bg-gray-100"
+                        }`}
+                      >
+                        {num}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className="p-2 w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-all font-medium"
+                  >
+                    <FaChevronRight size={12} />
+                  </button>
+                </div>
+
+                {/* Jump to Page */}
+                <div className="flex items-center gap-3 bg-[#f8fafc] px-4 py-2 rounded-xl border border-gray-100">
+                  <span className="text-sm font-medium text-gray-500 whitespace-nowrap">Jump to Page</span>
+                  <div className="relative flex items-center">
+                    <input
+                      type="text"
+                      placeholder={`1-${totalPages}`}
+                      value={jumpPage}
+                      onChange={(e) => setJumpPage(e.target.value)}
+                      onKeyDown={handleJumpPage}
+                      className="w-24 px-3 py-1.5 border rounded-lg outline-none text-sm text-center bg-white border-gray-200 focus:border-[#345261] transition-all font-medium"
+                    />
+                    <FaSearch className="absolute right-2 text-gray-300 pointer-events-none" size={10} />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

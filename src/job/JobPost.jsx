@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FaEdit, FaTrash, FaPlus, FaEye } from "react-icons/fa";
+import { FaEdit, FaTrash, FaPlus, FaEye, FaArrowLeft, FaChevronLeft, FaChevronRight, FaSearch } from "react-icons/fa";
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000";
 const ACTIVE_COLOR = "#1b6e39";
@@ -422,11 +422,20 @@ export function PreviewPage({ job, onEdit, onClose }) {
         <div className="p-8">
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-800">Job Preview</h2>
-              <p className="text-gray-600 mt-2">
-                Review job details before publishing
-              </p>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors text-[#345261]"
+                title="Back"
+              >
+                <FaArrowLeft size={20} />
+              </button>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-800">Job Preview</h2>
+                <p className="text-gray-600 mt-2">
+                  Review job details before publishing
+                </p>
+              </div>
             </div>
 
             {/* EDIT BUTTON — clean outline style like screenshot */}
@@ -578,7 +587,9 @@ export default function JobPost() {
   const [jobs, setJobs] = useState([]);
   const [editingJob, setEditingJob] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [jobsPerPage] = useState(10);
+  const [jobsPerPage, setJobsPerPage] = useState(50);
+  const [jumpPage, setJumpPage] = useState("");
+  const [rowsInput, setRowsInput] = useState(50);
 
   const [previewJob, setPreviewJob] = useState(null);
   const [toasts, setToasts] = useState([]);
@@ -623,6 +634,50 @@ export default function JobPost() {
   const indexOfFirstJob = indexOfLastJob - jobsPerPage;
   const currentJobs = displayJobs.slice(indexOfFirstJob, indexOfLastJob);
   const totalPages = Math.max(1, Math.ceil(displayJobs.length / jobsPerPage));
+
+  const getPageNumbers = () => {
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 4) {
+        for (let i = 1; i <= 5; i++) pages.push(i);
+        pages.push("...");
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 3) {
+        pages.push(1);
+        pages.push("...");
+        for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push("...");
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push("...");
+        pages.push(totalPages);
+      }
+    }
+    return pages;
+  };
+
+  const handleJumpPage = (e) => {
+    if (e.key === "Enter") {
+      const p = parseInt(jumpPage);
+      if (p >= 1 && p <= totalPages) {
+        setCurrentPage(p);
+        setJumpPage("");
+      }
+    }
+  };
+
+  const handleRowsChange = (e) => {
+    const val = e.target.value;
+    setRowsInput(val);
+    const n = parseInt(val);
+    if (!isNaN(n) && n > 0) {
+      setJobsPerPage(n);
+      setCurrentPage(1);
+    }
+  };
 
   const serial = (n) => String(n).padStart(2, "0");
 
@@ -907,44 +962,80 @@ export default function JobPost() {
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Section - Now Inside Table Container */}
+          {displayJobs.length >= 10 && (
+            <div className="flex items-center justify-between p-4 bg-white border-t border-gray-100 text-[#345261]">
+              {/* No. of Rows */}
+              <div className="flex items-center gap-3 bg-[#f8fafc] px-4 py-2 rounded-xl border border-gray-100">
+                <span className="text-sm font-medium text-gray-500 whitespace-nowrap">No. of Rows</span>
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    value={rowsInput}
+                    onChange={handleRowsChange}
+                    className="w-16 px-3 py-1.5 border rounded-lg outline-none text-sm text-center bg-white border-gray-200 focus:border-[#345261] transition-all font-medium"
+                  />
+                  <FaSearch className="absolute right-2 text-gray-300 pointer-events-none" size={10} />
+                </div>
+              </div>
+
+              {/* Navigation Pagers */}
+              <div className="flex items-center gap-6">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-all font-medium"
+                >
+                  <FaChevronLeft size={12} />
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {getPageNumbers().map((num, i) => (
+                    <button
+                      key={i}
+                      onClick={() => typeof num === "number" && setCurrentPage(num)}
+                      disabled={num === "..."}
+                      className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-semibold transition-all ${
+                        currentPage === num
+                          ? "bg-[#345261] text-white shadow-md transform scale-105"
+                          : num === "..."
+                          ? "cursor-default text-gray-400"
+                          : "hover:bg-gray-50 text-gray-600 active:bg-gray-100"
+                      }`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-all font-medium"
+                >
+                  <FaChevronRight size={12} />
+                </button>
+              </div>
+
+              {/* Jump to Page */}
+              <div className="flex items-center gap-3 bg-[#f8fafc] px-4 py-2 rounded-xl border border-gray-100">
+                <span className="text-sm font-medium text-gray-500 whitespace-nowrap">Jump to Page</span>
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    placeholder={`1-${totalPages}`}
+                    value={jumpPage}
+                    onChange={(e) => setJumpPage(e.target.value)}
+                    onKeyDown={handleJumpPage}
+                    className="w-24 px-3 py-1.5 border rounded-lg outline-none text-sm text-center bg-white border-gray-200 focus:border-[#345261] transition-all font-medium"
+                  />
+                  <FaSearch className="absolute right-2 text-gray-300 pointer-events-none" size={10} />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-
-        {/* Pagination*/}
-{displayJobs.length > 10 && (
-  <div className="flex justify-center items-center space-x-2 mt-8">
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 w-full max-w-7xl">
-      <div className="flex justify-center items-center gap-3">
-
-        {/* PREV */}
-        <button
-          onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-          disabled={currentPage === 1}
-          className="w-9 h-9 flex items-center justify-center border border-gray-300 
-                     bg-white text-gray-700 rounded-full disabled:opacity-40 disabled:cursor-not-allowed 
-                     hover:bg-gray-100 transition-colors"
-        >
-          &lt;
-        </button>
-
-        {/* CURRENT PAGE */}
-        <div className="w-10 h-10 flex items-center justify-center rounded-full 
-                        bg-[#345261] text-white text-sm font-medium">
-          {currentPage}
-        </div>
-
-        {/* NEXT */}
-        <button
-          onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-          disabled={currentPage === totalPages}
-          className="w-9 h-9 flex items-center justify-center border border-gray-300 
-                     bg-white text-gray-700 rounded-full disabled:opacity-40 disabled:cursor-not-allowed 
-                     hover:bg-gray-100 transition-colors" >
-          &gt;
-        </button>
-         </div>
-    </div>
-  </div>
-)}
      </div>
     </div>
   );

@@ -1,7 +1,7 @@
 
 
 import { useEffect, useState } from "react";
-import { FaDownload, FaChevronDown } from "react-icons/fa";
+import { FaDownload, FaChevronDown, FaArrowLeft, FaSearch, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000";
 
@@ -88,7 +88,16 @@ function ApplicantDetailPage({ applicant, onClose, onDownloadResume, onStatusCha
       <div className="max-w-7xl mx-auto">
         <div className="bg-white rounded-lg shadow p-4">
           {/* Header */}
-          <h1 className="text-2xl font-bold text-[#345261] mb-8">Applicant Summary</h1>
+          <div className="flex items-center gap-4 mb-8">
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors text-[#345261]"
+              title="Back"
+            >
+              <FaArrowLeft size={20} />
+            </button>
+            <h1 className="text-2xl font-bold text-[#345261]">Applicant Summary</h1>
+          </div>
 
           {/* Details Grid */}
           <div className="p-8 grid grid-cols-[180px_1fr] gap-y-5 text-[15px]">
@@ -273,7 +282,9 @@ export default function Applicants({ showToast }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredApplicants, setFilteredApplicants] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [recordsPerPage] = useState(10);
+  const [recordsPerPage, setRecordsPerPage] = useState(50);
+  const [jumpPage, setJumpPage] = useState("");
+  const [rowsInput, setRowsInput] = useState(50);
   const [selectedApplicant, setSelectedApplicant] = useState(null);
   const [showApplicantPage, setShowApplicantPage] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -379,6 +390,51 @@ export default function Applicants({ showToast }) {
   const indexOfLast = currentPage * recordsPerPage;
   const current = list.slice(indexOfLast - recordsPerPage, indexOfLast);
   const totalPages = Math.ceil(list.length / recordsPerPage);
+  
+  const getPageNumbers = () => {
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (currentPage > 4) pages.push("...");
+
+      let start = Math.max(2, currentPage - 2);
+      let end = Math.min(totalPages - 1, currentPage + 2);
+
+      if (currentPage <= 4) end = 5;
+      if (currentPage >= totalPages - 3) start = totalPages - 4;
+
+      for (let i = start; i <= end; i++) {
+        if (!pages.includes(i)) pages.push(i);
+      }
+
+      if (currentPage < totalPages - 3) pages.push("...");
+      if (!pages.includes(totalPages)) pages.push(totalPages);
+    }
+    return pages;
+  };
+
+  const handleJumpPage = (e) => {
+    if (e.key === "Enter") {
+      const p = parseInt(jumpPage);
+      if (p >= 1 && p <= totalPages) {
+        setCurrentPage(p);
+        setJumpPage("");
+      }
+    }
+  };
+
+  const handleRowsChange = (e) => {
+    const val = e.target.value;
+    setRowsInput(val);
+    if (!val) return;
+    const n = parseInt(val);
+    if (n > 0) {
+      setRecordsPerPage(n);
+      setCurrentPage(1);
+    }
+  };
 
   const getStatusStyle = (status) => {
     switch (status) {
@@ -527,32 +583,81 @@ export default function Applicants({ showToast }) {
               )}
             </tbody>
           </table>
+ 
+          {/* Pagination Section - Now Inside Table Container */}
+          {list.length >= 10 && (
+            <div className="flex items-center justify-between p-4 bg-white border-t border-gray-100 text-[#345261]">
+              {/* No. of Rows */}
+              <div className="flex items-center gap-3 bg-[#f8fafc] px-4 py-2 rounded-xl border border-gray-100">
+                <span className="text-sm font-medium text-gray-500 whitespace-nowrap">No. of Rows</span>
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    value={rowsInput}
+                    onChange={handleRowsChange}
+                    className="w-16 px-3 py-1.5 border rounded-lg outline-none text-sm text-center bg-white border-gray-200 focus:border-[#345261] transition-all font-medium"
+                  />
+                  <FaSearch className="absolute right-2 text-gray-300 pointer-events-none" size={10} />
+                </div>
+              </div>
+ 
+              {/* Pagination Controls */}
+              <div className="flex items-center gap-6">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-all"
+                >
+                  <FaChevronLeft size={12} />
+                </button>
+ 
+                <div className="flex items-center gap-2">
+                  {getPageNumbers().map((num, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => typeof num === "number" && setCurrentPage(num)}
+                      disabled={typeof num !== "number"}
+                      className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-semibold transition-all ${
+                        num === currentPage
+                          ? "bg-[#345261] text-white shadow-md transform scale-105"
+                          : num === "..."
+                          ? "cursor-default text-gray-400"
+                          : "hover:bg-gray-50 text-gray-600 active:bg-gray-100"
+                      }`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+ 
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-all font-medium"
+                >
+                  <FaChevronRight size={12} />
+                </button>
+              </div>
+ 
+              {/* Jump to Page */}
+              <div className="flex items-center gap-3 bg-[#f8fafc] px-4 py-2 rounded-xl border border-gray-100">
+                <span className="text-sm font-medium text-gray-500 whitespace-nowrap">Jump to Page</span>
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    value={jumpPage}
+                    onChange={(e) => setJumpPage(e.target.value)}
+                    onKeyDown={handleJumpPage}
+                    placeholder={`1-${totalPages}`}
+                    className="w-24 px-3 py-1.5 border rounded-lg outline-none text-sm text-center bg-white border-gray-200 focus:border-[#345261] transition-all font-medium"
+                  />
+                  <FaSearch className="absolute right-2 text-gray-300 pointer-events-none" size={10} />
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* Pagination */}
-        {list.length > recordsPerPage && (
-          <div className="flex justify-center mt-6 gap-3">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-              className="w-9 h-9 border rounded-full flex items-center justify-center disabled:opacity-40"
-            >
-              &lt;
-            </button>
-
-            <div className="w-10 h-10 flex items-center justify-center rounded-full bg-[#345261] text-white">
-              {currentPage}
-            </div>
-
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-              className="w-9 h-9 border rounded-full flex items-center justify-center disabled:opacity-40"
-            >
-              &gt;
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

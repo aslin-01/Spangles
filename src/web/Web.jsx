@@ -41,6 +41,15 @@ export function JobModal({ job, onClose, showToast }) {
   const required = toList(job?.requiredQualifications || "");
   const responsibilities = toList(job?.responsibilities || "");
 
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -154,9 +163,9 @@ export function JobModal({ job, onClose, showToast }) {
   if (!job) return null;
 
   return (
-    <div className="fixed inset-0 bg-[rgba(0,0,0,0.55)] flex items-center justify-center p-3 z-50">
+    <div className="fixed inset-0 z-50 overflow-y-auto bg-[rgba(0,0,0,0.55)] px-3 py-6">
       {/* ------------ MAIN MODAL ------------ */}
-      <div className="bg-white w-[1200px] max-w-[95vw] max-h-[90vh] rounded-2xl shadow-xl border flex relative overflow-hidden">
+      <div className="relative mx-auto flex w-[1200px] max-w-[95vw] rounded-2xl border bg-white shadow-xl overflow-hidden">
         <button
           onClick={onClose}
           className="absolute right-6 top-6 text-2xl text-gray-700 hover:text-black z-10"
@@ -165,7 +174,7 @@ export function JobModal({ job, onClose, showToast }) {
         </button>
 
         {/* LEFT CONTENT */}
-        <div className="flex-1 p-10 overflow-y-auto relative border-r-2" style={{ borderColor: "#345261" }}>
+        <div className="relative flex-1 border-r-2 p-10" style={{ borderColor: "#345261" }}>
           <h1 className="text-4xl font-bold text-[#345261] mb-6">
             {job.jobTitle}
           </h1>
@@ -338,8 +347,8 @@ export function JobModal({ job, onClose, showToast }) {
 
       {/* ------------ APPLY FORM MODAL ------------ */}
       {showApply && (
-        <div className="fixed inset-0 bg-[rgba(0,0,0,0.65)] flex items-center justify-center p-6 z-[60]">
-          <div className="bg-white rounded-2xl shadow-xl border w-full max-w-4xl max-h-[90vh] overflow-y-auto relative">
+        <div className="fixed inset-0 z-[60] overflow-y-auto bg-[rgba(0,0,0,0.65)] px-6 py-6">
+          <div className="relative mx-auto w-full max-w-4xl rounded-2xl border bg-white shadow-xl">
             <button
               onClick={() => setShowApply(false)}
               className="absolute top-4 right-4 text-2xl font-bold text-black z-10"

@@ -7,6 +7,8 @@ import {
   FaEdit,
   FaCalendarAlt,
   FaRegClock,
+  FaChevronLeft,
+  FaChevronRight,
 } from "react-icons/fa";
 import JoditEditor from "jodit-react";
 import "jodit/es5/jodit.min.css";
@@ -79,6 +81,12 @@ export default function Blogs() {
 
   const [toast, setToast] = useState(null);
 
+  /* PAGINATION STATE */
+  const [currentPage, setCurrentPage] = useState(1);
+  const [recordsPerPage, setRecordsPerPage] = useState(50);
+  const [jumpPage, setJumpPage] = useState("");
+  const [rowsInput, setRowsInput] = useState(50);
+
   /* Inject Toolbar CSS */
   useEffect(() => {
     const style = document.createElement("style");
@@ -118,6 +126,56 @@ export default function Blogs() {
   const filteredBlogs = blogs.filter((b) =>
     b.title.toLowerCase().includes(search.toLowerCase())
   );
+
+  /* PAGINATION LOGIC */
+  const indexOfLastRecord = currentPage * recordsPerPage;
+  const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
+  const currentBlogs = filteredBlogs.slice(indexOfFirstRecord, indexOfLastRecord);
+  const totalPages = Math.max(1, Math.ceil(filteredBlogs.length / recordsPerPage));
+
+  const getPageNumbers = () => {
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 4) {
+        for (let i = 1; i <= 5; i++) pages.push(i);
+        pages.push("...");
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 3) {
+        pages.push(1);
+        pages.push("...");
+        for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push("...");
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push("...");
+        pages.push(totalPages);
+      }
+    }
+    return pages;
+  };
+
+  const handleJumpPage = (e) => {
+    if (e.key === "Enter") {
+      const p = parseInt(jumpPage);
+      if (p >= 1 && p <= totalPages) {
+        setCurrentPage(p);
+        setJumpPage("");
+      }
+    }
+  };
+
+  const handleRowsChange = (e) => {
+    const val = e.target.value;
+    setRowsInput(val);
+    const n = parseInt(val);
+    if (!isNaN(n) && n > 0) {
+      setRecordsPerPage(n);
+      setCurrentPage(1);
+    }
+  };
 
   /* Upload Blog */
   const uploadBlog = async () => {
@@ -235,7 +293,7 @@ export default function Blogs() {
 
           {/* BLOG GRID */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredBlogs.map((blog) => (
+            {currentBlogs.map((blog) => (
               <div
                 key={blog._id}
                 className="w-[344px] bg-white rounded-2xl border shadow-sm overflow-hidden flex"
@@ -243,7 +301,7 @@ export default function Blogs() {
               >
                 <div className="w-[140px] h-full">
                   <img
-                    src={`${API_BASE}${blog.image}`}
+                    src={`${API_BASE}/api/blogs/view/${blog.image.split("/").pop()}`}
                     className="w-full h-full object-cover rounded-l-2xl"
                     alt="blog"
                   />
@@ -279,7 +337,7 @@ export default function Blogs() {
                         setSelectedBlog(blog);
                         setTitle(blog.title);
                         setContent(blog.content);
-                        setImagePreview(`${API_BASE}${blog.image}`);
+                        setImagePreview(`${API_BASE}/api/blogs/view/${blog.image.split("/").pop()}`);
                         setImageFile(null);
                         setPage("add");
                       }}
@@ -292,15 +350,102 @@ export default function Blogs() {
               </div>
             ))}
           </div>
+
+          {/* Pagination Section */}
+          {filteredBlogs.length >= 10 && (
+            <div className="flex items-center justify-between p-4 bg-white border rounded-xl shadow-sm mt-8 text-[#345261]">
+              {/* No. of Rows */}
+              <div className="flex items-center gap-3 bg-[#f8fafc] px-4 py-2 rounded-xl border border-gray-100">
+                <span className="text-sm font-medium text-gray-500 whitespace-nowrap">No. of Rows</span>
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    value={rowsInput}
+                    onChange={handleRowsChange}
+                    className="w-16 px-3 py-1.5 border rounded-lg outline-none text-sm text-center bg-white border-gray-200 focus:border-[#345261] transition-all font-medium"
+                  />
+                  <FaSearch className="absolute right-2 text-gray-300 pointer-events-none" size={10} />
+                </div>
+              </div>
+
+              {/* Navigation Pagers */}
+              <div className="flex items-center gap-6">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-all font-medium"
+                >
+                  <FaChevronLeft size={12} />
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {getPageNumbers().map((num, i) => (
+                    <button
+                      key={i}
+                      onClick={() => typeof num === "number" && setCurrentPage(num)}
+                      disabled={num === "..."}
+                      className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-semibold transition-all ${
+                        currentPage === num
+                          ? "bg-[#345261] text-white shadow-md transform scale-105"
+                          : num === "..."
+                          ? "cursor-default text-gray-400"
+                          : "hover:bg-gray-50 text-gray-600 active:bg-gray-100"
+                      }`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-all font-medium"
+                >
+                  <FaChevronRight size={12} />
+                </button>
+              </div>
+
+              {/* Jump to Page */}
+              <div className="flex items-center gap-3 bg-[#f8fafc] px-4 py-2 rounded-xl border border-gray-100">
+                <span className="text-sm font-medium text-gray-500 whitespace-nowrap">Jump to Page</span>
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    placeholder={`1-${totalPages}`}
+                    value={jumpPage}
+                    onChange={(e) => setJumpPage(e.target.value)}
+                    onKeyDown={handleJumpPage}
+                    className="w-24 px-3 py-1.5 border rounded-lg outline-none text-sm text-center bg-white border-gray-200 focus:border-[#345261] transition-all font-medium"
+                  />
+                  <FaSearch className="absolute right-2 text-gray-300 pointer-events-none" size={10} />
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
 
       {/* ADD / EDIT PAGE */}
       {page === "add" && (
         <div className="bg-white border rounded-lg p-6 shadow-sm">
-          <h2 className="text-xl font-semibold mb-4">
-            {isEditing ? "Edit Blog" : "New Blog"}
-          </h2>
+          <div className="flex items-center gap-4 mb-4">
+            <button
+              onClick={() => {
+                if (imagePreview?.startsWith("blob:")) {
+                  URL.revokeObjectURL(imagePreview);
+                }
+                setPage("list");
+              }}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors text-[#345261]"
+              title="Back"
+            >
+              <FaArrowLeft size={20} />
+            </button>
+            <h2 className="text-xl font-semibold">
+              {isEditing ? "Edit Blog" : "New Blog"}
+            </h2>
+          </div>
 
           <label className="block font-medium mb-1">Title</label>
           <input
@@ -422,7 +567,7 @@ export default function Blogs() {
             </div>
 
             <img
-              src={`${API_BASE}${selectedBlog.image}`}
+              src={`${API_BASE}/api/blogs/view/${selectedBlog.image.split("/").pop()}`}
               className="w-full h-[351px] object-cover rounded mb-6"
               alt=""
             />

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { FaEye, FaEdit, FaTrash, FaDownload, FaPrint, FaPlus } from "react-icons/fa";
+import { FaEye, FaEdit, FaTrash, FaDownload, FaPrint, FaPlus, FaArrowLeft, FaSearch, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import autoTable from "jspdf-autotable";
 import jsPDF from "jspdf";
 import JobPost from "../job/JobPost";
@@ -7,10 +7,44 @@ import Applicants from "../applicants/Applicants";
 import Gallary from "../gallery/Gallery";
 import Blogs from "../blogs/Blogs"; 
 import UserAccess from "../useraccess/UserAccess";
-import { useNavigate } from "react-router-dom";
-import { FaSignOutAlt } from "react-icons/fa";
+import Enquiries from "../enquiries/Enquiries";
+import { useNavigate, useLocation, Outlet } from "react-router-dom";
+import Navbar from "../sidebar/Sidebar";
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000";
+
+const SECTION_PATH = {
+  applicants: "/applicants",
+  blogs: "/blogs",
+  gallery: "/gallery",
+  invoice: "/invoice",
+  job: "/job",
+  quotation: "/quotation",
+  enquiries: "/enquiries",
+  "user-access": "/access",
+};
+
+function pathnameToSection(pathname) {
+  const found = Object.entries(SECTION_PATH).find(([, p]) => p === pathname);
+  return found ? found[0] : null;
+}
+
+function canAccessPage(u, name) {
+  if (!u || !name) return false;
+  if (u.role === "admin") return true;
+  if (name === "user-access") return false;
+  const a = u.access || {};
+  const map = {
+    applicants: a.applicants,
+    blogs: a.blogs,
+    gallery: a.gallery,
+    invoice: a.invoice,
+    job: a.job,
+    quotation: a.quotation,
+    enquiries: a.enquiries,
+  };
+  return !!map[name];
+}
 
 /* ------------------ Utilities ------------------ */
 const currency = (value) => {
@@ -370,9 +404,19 @@ export default function Bill() {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [toastMsg, setToastMsg] = useState(null);
   const toastTimerRef = useRef(null);
-  const user = JSON.parse(localStorage.getItem("user"));
+  const user = JSON.parse(sessionStorage.getItem("user"));
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const TOAST_DURATION = 3000;
+
+  const goToSection = (name) => {
+    const path = SECTION_PATH[name];
+    if (path) {
+      setPage(name);
+      navigate(path);
+    }
+  };
   
   const btn = (name) =>
     `w-full text-left px-4 py-3 rounded mb-2 ${
@@ -381,9 +425,11 @@ export default function Bill() {
 
   // Pagination and Search States
   const [currentPage, setCurrentPage] = useState(1);
-  const [recordsPerPage] = useState(10);
+  const [recordsPerPage, setRecordsPerPage] = useState(50);
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredRecords, setFilteredRecords] = useState(null);
+  const [jumpPage, setJumpPage] = useState("");
+  const [rowsInput, setRowsInput] = useState(50);
 
 
   function getFirstAllowedPage(user) {
@@ -402,18 +448,29 @@ export default function Bill() {
 
   return null;
 }
-const hasInitialPage = useRef(false);
-
 useEffect(() => {
   if (!user) return;
-  if (hasInitialPage.current) return;
 
-  const first = getFirstAllowedPage(user);
-  if (first) {
-    setPage(first);
-    hasInitialPage.current = true;
+  if (location.pathname === "/dashboard") {
+    const first = getFirstAllowedPage(user);
+    if (first) {
+      setPage(first);
+      navigate(SECTION_PATH[first], { replace: true });
+    }
+    return;
   }
-}, [user]);
+
+  const section = pathnameToSection(location.pathname);
+  if (section && canAccessPage(user, section)) {
+    setPage(section);
+    return;
+  }
+
+  if (section && !canAccessPage(user, section)) {
+    const first = getFirstAllowedPage(user);
+    if (first) navigate(SECTION_PATH[first], { replace: true });
+  }
+}, [user, location.pathname, navigate]);
 
 
   useEffect(() => {
@@ -485,6 +542,50 @@ useEffect(() => {
     
     setFilteredRecords(filtered);
     setCurrentPage(1);
+  };
+
+  const getPageNumbers = () => {
+    const pages = [];
+    if (totalPages <= 7) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      if (currentPage <= 4) {
+        for (let i = 1; i <= 5; i++) pages.push(i);
+        pages.push("...");
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 3) {
+        pages.push(1);
+        pages.push("...");
+        for (let i = totalPages - 4; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push("...");
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push("...");
+        pages.push(totalPages);
+      }
+    }
+    return pages;
+  };
+
+  const handleJumpPage = (e) => {
+    if (e.key === "Enter") {
+      const p = parseInt(jumpPage);
+      if (p >= 1 && p <= totalPages) {
+        setCurrentPage(p);
+        setJumpPage("");
+      }
+    }
+  };
+
+  const handleRowsChange = (e) => {
+    const val = e.target.value;
+    setRowsInput(val);
+    const n = parseInt(val);
+    if (!isNaN(n) && n > 0) {
+      setRecordsPerPage(n);
+      setCurrentPage(1);
+    }
   };
 
   const displayRecords = filteredRecords || (page === "quotation" ? quotations : invoices);
@@ -1093,75 +1194,13 @@ useEffect(() => {
     setPreviewOpen(true);
   };
 
-  const navigate = useNavigate();
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
-
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    navigate("/login", { replace: true });
-  };
 
   /* ---------- Render ---------- */
   return (
     <div className="min-h-screen bg-gray-50 flex font-sans text-slate-800">
       <Toast />
 
-      {/* Sidebar */}
-      <aside className="w-56 bg-[#344955] text-white p-6 fixed left-0 top-0 bottom-0 flex flex-col">
-        <div className="text-2xl font-semibold mb-8">Billing</div>
-
-        {/* NAV ITEMS */}
-        <div className="flex-1">
-          {/* ✅ ADMIN */}
-          {user?.role === "admin" && (
-            <>
-              <button onClick={() => setPage("applicants")} className={btn("applicants")}>Applicants</button>
-              <button onClick={() => setPage("blogs")} className={btn("blogs")}>Blogs</button>
-              <button onClick={() => setPage("gallery")} className={btn("gallery")}>Gallery</button>
-              <button onClick={() => setPage("invoice")} className={btn("invoice")}>Invoice</button>
-              <button onClick={() => setPage("job")} className={btn("job")}>Job Post</button>
-              <button onClick={() => setPage("quotation")} className={btn("quotation")}>Quotation</button>
-              <button onClick={() => setPage("user-access")} className={btn("user-access")}>
-                User Access
-              </button>
-            </>
-          )}
-
-          {/* ✅ USER */}
-          {user?.role === "user" && (
-            <>
-              {user.access?.applicants && (
-                <button onClick={() => setPage("applicants")} className={btn("applicants")}>Applicants</button>
-              )}
-              {user.access?.blogs && (
-                <button onClick={() => setPage("blogs")} className={btn("blogs")}>Blogs</button>
-              )}
-              {user.access?.gallery && (
-                <button onClick={() => setPage("gallery")} className={btn("gallery")}>Gallery</button>
-              )}
-              {user.access?.invoice && (
-                <button onClick={() => setPage("invoice")} className={btn("invoice")}>Invoice</button>
-              )}
-              {user.access?.job && (
-                <button onClick={() => setPage("job")} className={btn("job")}>Job Post</button>
-              )}
-              {user.access?.quotation && (
-                <button onClick={() => setPage("quotation")} className={btn("quotation")}>Quotation</button>
-              )}
-            </>
-          )}
-        </div>
-
-        {/* ✅ LOGOUT → COMMON FOR ALL */}
-        <button
-          onClick={() => setShowLogoutConfirm(true)}
-          className="mt-4 flex items-center gap-3 px-4 py-3 rounded text-left
-                     hover:bg-[#24343b] text-white-300 hover:text-white-400"
-        >
-          <FaSignOutAlt />
-          Logout
-        </button>
-      </aside>
+      <Navbar page={page} goToSection={goToSection} btn={btn} />
 
       <main className="flex-1 ml-56 p-8">
         {/* JOB */}
@@ -1177,7 +1216,10 @@ useEffect(() => {
 
         ) : page === "blogs" && (user?.role === "admin" || user?.access?.blogs) ? (
           <Blogs />
-          
+
+        ) : page === "enquiries" && (user?.role === "admin" || user?.access?.enquiries) ? (
+          <Enquiries showToast={showToast} />
+
         ) : page === "user-access" && user?.role === "admin" ? (
           <UserAccess />
 
@@ -1285,22 +1327,81 @@ useEffect(() => {
                     ))
                   )}
                 </tbody>
-              </table>
-            </div>
-
-          
-            {totalPages > 1 && (
-              <div className="flex justify-center mt-6 gap-2">
-                <button onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}>&lt;</button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
-                  <button key={n} onClick={() => setCurrentPage(n)}
-                    className={currentPage === n ? "bg-[#345261] text-white" : ""}>
-                    {n}
-                  </button>
-                ))}
-                <button onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}>&gt;</button>
+          </table>
+ 
+          {/* Pagination Section - Now Inside Table Container */}
+          {displayRecords.length >= 10 && (
+            <div className="flex items-center justify-between p-4 bg-white border-t border-gray-100 text-[#345261]">
+              {/* No. of Rows */}
+              <div className="flex items-center gap-3 bg-[#f8fafc] px-4 py-2 rounded-xl border border-gray-100">
+                <span className="text-sm font-medium text-gray-500 whitespace-nowrap">No. of Rows</span>
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    value={rowsInput}
+                    onChange={handleRowsChange}
+                    className="w-16 px-3 py-1.5 border rounded-lg outline-none text-sm text-center bg-white border-gray-200 focus:border-[#345261] transition-all font-medium"
+                  />
+                  <FaSearch className="absolute right-2 text-gray-300 pointer-events-none" size={10} />
+                </div>
               </div>
-            )}
+
+              {/* Navigation Pagers */}
+              <div className="flex items-center gap-6">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-all font-medium"
+                >
+                  <FaChevronLeft size={12} />
+                </button>
+
+                <div className="flex items-center gap-2">
+                  {getPageNumbers().map((num, i) => (
+                    <button
+                      key={i}
+                      onClick={() => typeof num === "number" && setCurrentPage(num)}
+                      disabled={num === "..."}
+                      className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-semibold transition-all ${
+                        currentPage === num
+                          ? "bg-[#345261] text-white shadow-md transform scale-105"
+                          : num === "..."
+                          ? "cursor-default text-gray-400"
+                          : "hover:bg-gray-50 text-gray-600 active:bg-gray-100"
+                      }`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="p-2 w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-all font-medium"
+                >
+                  <FaChevronRight size={12} />
+                </button>
+              </div>
+
+              {/* Jump to Page */}
+              <div className="flex items-center gap-3 bg-[#f8fafc] px-4 py-2 rounded-xl border border-gray-100">
+                <span className="text-sm font-medium text-gray-500 whitespace-nowrap">Jump to Page</span>
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    placeholder={`1-${totalPages}`}
+                    value={jumpPage}
+                    onChange={(e) => setJumpPage(e.target.value)}
+                    onKeyDown={handleJumpPage}
+                    className="w-24 px-3 py-1.5 border rounded-lg outline-none text-sm text-center bg-white border-gray-200 focus:border-[#345261] transition-all font-medium"
+                  />
+                  <FaSearch className="absolute right-2 text-gray-300 pointer-events-none" size={10} />
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
           </div>
 
         ) : (
@@ -1398,35 +1499,7 @@ useEffect(() => {
         />
       )}
 
-      {/* LOGOUT CONFIRMATION MODAL */}
-      {showLogoutConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white rounded-xl w-[400px] p-6 shadow-lg text-center">
-            <h3 className="text-lg font-semibold mb-2">
-              Are you sure you want to logout?
-            </h3>
-            <p className="text-sm text-gray-500 mb-6">
-              You will be redirected to the login page.
-            </p>
 
-            <div className="flex justify-center gap-4">
-              <button
-                onClick={() => setShowLogoutConfirm(false)}
-                className="px-6 py-2 rounded bg-gray-200 hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={handleLogout}
-                className="px-6 py-2 rounded bg-red-600 text-white hover:bg-red-700"
-              >
-                Logout
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* small embedded styles */}
       <style>{`
@@ -1449,6 +1522,7 @@ useEffect(() => {
 }
 
       `}</style>
+      <Outlet />
     </div>
   );
 }
@@ -1911,6 +1985,15 @@ function PreviewModal({
           ref={refNode}
           className="bg-white w-full max-w-3xl rounded-2xl shadow-xl border border-gray-200 my-6 p-6 max-h-[90vh] overflow-y-auto relative"
         >
+          <div className="absolute top-6 left-6">
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors text-[#345261]"
+              title="Back"
+            >
+              <FaArrowLeft size={20} />
+            </button>
+          </div>
           <div className="flex justify-end items-center gap-2 mb-2">
             <button
               title="Edit"

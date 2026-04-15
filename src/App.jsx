@@ -2,17 +2,17 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import Login from "./login/Login";
 import Bill from "./bill/Bill";
-import Applicants from "./applicants/Applicants";
-import BlogEditor from "./blogs/Blogs";
-import Gallery from "./gallery/Gallery";
-import JobPost from "./job/JobPost";
-import UserAccess from "./useraccess/UserAccess";
 
 import './index.css';
 const PrivateRoute = ({ children }) => {
-  const user = localStorage.getItem("user");
+  const user = sessionStorage.getItem("user");
   return user ? children : <Navigate to="/login" replace />;
 };
+
+/** Renders nothing; exists so nested routes match and Bill’s <Outlet /> stays active. */
+function BillRouteStub() {
+  return null;
+}
 
 export default function App() {
   return (
@@ -22,61 +22,24 @@ export default function App() {
         {/* Login Page */}
         <Route path="/login" element={<Login />} />
 
-        {/* ADMIN PAGES */}
+        {/* Dashboard shell: one Bill instance for all section paths */}
         <Route
-          path="/dashboard"
-          element={  
+          element={
             <PrivateRoute>
-              
               <Bill />
             </PrivateRoute>
           }
-        />
-
-        <Route
-          path="/applicants"
-          element={
-            <PrivateRoute>
-              <Applicants />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/blogs"
-          element={
-            <PrivateRoute>
-              <BlogEditor />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/gallery"
-          element={
-            <PrivateRoute>
-              <Gallery />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/job"
-          element={
-            <PrivateRoute>
-              <JobPost />
-            </PrivateRoute>
-          }
-        />
-
-        <Route
-          path="/access"
-          element={
-            <PrivateRoute>
-              <UserAccess />
-            </PrivateRoute>
-          }
-        />
+        >
+          <Route path="dashboard" element={<BillRouteStub />} />
+          <Route path="applicants" element={<BillRouteStub />} />
+          <Route path="blogs" element={<BillRouteStub />} />
+          <Route path="gallery" element={<BillRouteStub />} />
+          <Route path="job" element={<BillRouteStub />} />
+          <Route path="access" element={<BillRouteStub />} />
+          <Route path="invoice" element={<BillRouteStub />} />
+          <Route path="quotation" element={<BillRouteStub />} />
+          <Route path="enquiries" element={<BillRouteStub />} />
+        </Route>
 
         {/* Default Route */}
         <Route path="/" element={<Navigate to="/login" replace />} />
