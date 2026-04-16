@@ -1,4 +1,4 @@
-
+import mongoose from "mongoose";
 import Gallery from "../models/Gallery.js";
 import path from "path";
 import fs from "fs";
@@ -26,8 +26,10 @@ export const createGallery = async (req, res) => {
       name: f.originalname,
     }));
 
+    console.log("Creating gallery with title:", req.body.title, "and category:", req.body.category);
     const gallery = await Gallery.create({
       title: req.body.title || "",
+      category: req.body.category || "",
       items,
     });
 
@@ -39,10 +41,14 @@ export const createGallery = async (req, res) => {
 
 export const updateGallery = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid gallery ID" });
+    }
     const gallery = await Gallery.findById(req.params.id);
     if (!gallery) return res.status(404).json({ message: "Not found" });
 
     if (req.body.title !== undefined) gallery.title = req.body.title;
+    if (req.body.category !== undefined) gallery.category = req.body.category;
 
     const newItems = (req.files || []).map((f) => ({
       url: `/uploads/gallery/${f.filename}`,
@@ -62,6 +68,9 @@ export const updateGallery = async (req, res) => {
 export const deleteGalleryItem = async (req, res) => {
   try {
     const { id, filename } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: "Invalid gallery ID" });
+    }
     const gallery = await Gallery.findById(id);
     if (!gallery) return res.status(404).json({ message: "Not found" });
 
@@ -73,7 +82,7 @@ export const deleteGalleryItem = async (req, res) => {
     if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 
     await gallery.save();
-    res.json({ items: gallery.items });
+    res.json(gallery);
   } catch {
     res.status(500).json({ message: "Delete failed" });
   }
@@ -81,6 +90,9 @@ export const deleteGalleryItem = async (req, res) => {
 
 export const deleteFullGallery = async (req, res) => {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: "Invalid gallery ID" });
+    }
     const gallery = await Gallery.findById(req.params.id);
     if (!gallery) return res.status(404).json({ message: "Not found" });
 

@@ -2,8 +2,13 @@ import Job from "../models/Job.js";
 
 /* Admin – all jobs */
 export const getJobs = async (req, res) => {
-  const jobs = await Job.find().sort({ createdAt: -1 });
-  res.json(jobs);
+  try {
+    const jobs = await Job.find().sort({ createdAt: -1 });
+    res.json(jobs);
+  } catch (error) {
+    console.error("Error fetching jobs:", error);
+    res.status(500).json({ error: "Failed to fetch jobs" });
+  }
 };
 
 /* 🌍 Public – ONLY active jobs */
@@ -30,18 +35,33 @@ export const getPublicJobs = async (req, res) => {
   }
 };
 export const createJob = async (req, res) => {
-  const job = await Job.create(req.body);
-  res.status(201).json(job);
+  try {
+    const job = await Job.create(req.body);
+    res.status(201).json(job);
+  } catch (error) {
+    console.error("Error creating job:", error);
+    res.status(500).json({ error: error.message });
+  }
 };
 
 export const updateJob = async (req, res) => {
-  const job = await Job.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-  });
-  res.json(job);
+  try {
+    const job = await Job.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
+    res.json(job);
+  } catch (error) {
+    console.error("Error updating job:", error);
+    res.status(500).json({ error: error.message });
+  }
 };
 
 export const deleteJob = async (req, res) => {
-  await Job.findByIdAndDelete(req.params.id);
-  res.json({ success: true });
+  try {
+    await Job.findByIdAndDelete(req.params.id);
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting job:", error);
+    res.status(500).json({ error: error.message });
+  }
 };

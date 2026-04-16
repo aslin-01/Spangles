@@ -1,8 +1,13 @@
 import Quotation from "../models/Quotation.js";
 
 export const getQuotations = async (req, res) => {
-  const data = await Quotation.find().sort({ createdAt: -1 });
-  res.json(data);
+  try {
+    const data = await Quotation.find().sort({ createdAt: -1 });
+    res.json(data);
+  } catch (e) {
+    console.error("Error fetching quotations:", e);
+    res.status(500).json({ error: e.message });
+  }
 };
 
 export const createQuotation = async (req, res) => {

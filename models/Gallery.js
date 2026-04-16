@@ -10,6 +10,7 @@ const itemSchema = new mongoose.Schema({
 
 const gallerySchema = new mongoose.Schema({
   title: String,
+  category: String,
   items: [itemSchema],
   createdAt: { type: Date, default: Date.now },
 });

@@ -21,6 +21,14 @@ const blogSchema = new mongoose.Schema(
       unique: false, // Change from true to false
       sparse: true, // Allows null values
     },
+    category: {
+      type: String,
+      default: "",
+    },
+    tags: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true }
 );

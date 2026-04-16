@@ -21,11 +21,23 @@ export const createBlog = async (req, res) => {
       remove: /[*+~.()'"!:@]/g,
     });
 
+    // Normalize tags (Handle both array and comma-separated string)
+    let tags = [];
+    if (req.body.tags) {
+      if (Array.isArray(req.body.tags)) {
+        tags = req.body.tags.map(t => t.trim()).filter(Boolean);
+      } else {
+        tags = req.body.tags.split(",").map(t => t.trim()).filter(Boolean);
+      }
+    }
+
     const blog = new Blog({
       title: req.body.title,
       content: req.body.content,
       image: `/uploads/blogs/${req.file.filename}`,
       slug: slug,
+      category: req.body.category || "",
+      tags: tags,
     });
 
     await blog.save();
@@ -40,6 +52,8 @@ export const createBlog = async (req, res) => {
           content: req.body.content,
           image: `/uploads/blogs/${req.file.filename}`,
           slug: uniqueSlug,
+          category: req.body.category || "",
+          tags: req.body.tags ? (Array.isArray(req.body.tags) ? req.body.tags.map(t => t.trim()).filter(Boolean) : req.body.tags.split(",").map(t => t.trim()).filter(Boolean)) : [],
         });
         await blog.save();
         return res.status(201).json(blog);
@@ -90,6 +104,18 @@ export const updateBlog = async (req, res) => {
       });
     }
 
+    if (req.body.category !== undefined) {
+      blog.category = req.body.category;
+    }
+
+    if (req.body.tags !== undefined) {
+      if (Array.isArray(req.body.tags)) {
+        blog.tags = req.body.tags.map(t => t.trim()).filter(Boolean);
+      } else {
+        blog.tags = req.body.tags.split(",").map(t => t.trim()).filter(Boolean);
+      }
+    }
+
     if (req.file) {
       if (blog.image) {
         const oldImagePath = path.join(process.cwd(), blog.image);
@@ -127,6 +153,7 @@ export const deleteBlog = async (req, res) => {
     res.status(500).json({ error: err.message || "Server error" });
   }
 };
+
 
 /* -------------------- SECURE IMAGE SERVING -------------------- */
 export const serveBlogImage = async (req, res) => {

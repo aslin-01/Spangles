@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import dns from "dns";
 import mongoose from "mongoose";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -13,6 +14,7 @@ import galleryRoutes from "./routes/galleryRoutes.js";
 import invoiceRoutes from "./routes/invoiceRoutes.js";
 import quotationRoutes from "./routes/quotationRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js"
+import clientRoutes from "./routes/clientRoutes.js";
 
 
 dotenv.config();
@@ -26,6 +28,7 @@ const __dirname = path.dirname(__filename);
 /* ---------- MIDDLEWARE ---------- */
 app.use(cors({ origin: "*", credentials: true }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 /* ✅ STATIC UPLOADS (CRITICAL) */
 // Block direct access to gallery folder (it must go through /api/gallery/view/:filename)
@@ -52,11 +55,21 @@ app.use("/api/gallery", galleryRoutes);
 app.use("/api/invoices", invoiceRoutes);
 app.use("/api/quotations", quotationRoutes);
 app.use("/api/contact", contactRoutes);
-
+app.use("/api/clients", clientRoutes);
 
 /* ---------- DATABASE ---------- */
+const dnsServers = process.env.DNS_SERVERS
+  ? process.env.DNS_SERVERS.split(",").map((s) => s.trim())
+  : ["8.8.8.8", "1.1.1.1"];
+
+dns.setServers(dnsServers);
+console.log("🌐 Using DNS servers:", dnsServers);
+
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect(process.env.MONGO_URI, {
+    serverSelectionTimeoutMS: 10000,
+    connectTimeoutMS: 10000,
+  })
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => {
     console.error("❌ MongoDB error:", err);
@@ -69,8 +82,18 @@ app.get("/", (req, res) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📂 Uploads → http://localhost:${PORT}/uploads`);
+const HOST = process.env.HOST || "0.0.0.0";
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception:", error);
+});
+
+app.listen(PORT, HOST, () => {
+  console.log(`🚀 Server running on http://${HOST === "0.0.0.0" ? "localhost" : HOST}:${PORT}`);
+  console.log(`📂 Uploads → http://${HOST === "0.0.0.0" ? "localhost" : HOST}:${PORT}/uploads`);
   console.log(`🛡️  SECURITY UPDATE: Password Hashing is ACTIVE`);
 });
