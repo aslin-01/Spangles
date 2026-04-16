@@ -9,6 +9,8 @@ import {
   FaRegClock,
   FaChevronLeft,
   FaChevronRight,
+  FaChevronDown,
+  FaTimes,
 } from "react-icons/fa";
 import JoditEditor from "jodit-react";
 import "jodit/es5/jodit.min.css";
@@ -87,6 +89,19 @@ export default function Blogs() {
   const [jumpPage, setJumpPage] = useState("");
   const [rowsInput, setRowsInput] = useState(50);
 
+  /* CATEGORY & TAG STATE */
+  const [category, setCategory] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [tags, setTags] = useState([]);
+  const [availableTags, setAvailableTags] = useState([]);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showTagModal, setShowTagModal] = useState(false);
+  const [newCategory, setNewCategory] = useState("");
+  const [newTag, setNewTag] = useState("");
+  const [categoryCounts, setCategoryCounts] = useState({});
+  const [tagCounts, setTagCounts] = useState({});
+  const [generalConfirm, setGeneralConfirm] = useState(null);
+
   /* Inject Toolbar CSS */
   useEffect(() => {
     const style = document.createElement("style");
@@ -101,6 +116,24 @@ export default function Blogs() {
       const res = await fetch(`${API_BASE}/api/blogs`);
       const data = await res.json();
       setBlogs(data);
+
+      // Extract unique categories and counts
+      const catMap = {};
+      const tagMap = {};
+      data.forEach(blog => {
+        if (blog.category) {
+          catMap[blog.category] = (catMap[blog.category] || 0) + 1;
+        }
+        if (Array.isArray(blog.tags)) {
+          blog.tags.forEach(t => {
+            tagMap[t] = (tagMap[t] || 0) + 1;
+          });
+        }
+      });
+      setCategories(Object.keys(catMap).sort());
+      setAvailableTags(Object.keys(tagMap).sort());
+      setCategoryCounts(catMap);
+      setTagCounts(tagMap);
     } catch (err) {
       console.error("Error loading blogs:", err);
     }
@@ -184,6 +217,8 @@ export default function Blogs() {
       formData.append("title", title);
       formData.append("content", content);
       formData.append("image", imageFile);
+      formData.append("category", category);
+      tags.forEach((tag) => formData.append("tags", tag));
 
       const res = await fetch(`${API_BASE}/api/blogs`, {
         method: "POST",
@@ -208,6 +243,8 @@ export default function Blogs() {
       formData.append("title", title);
       formData.append("content", content);
       if (imageFile) formData.append("image", imageFile);
+      formData.append("category", category);
+      tags.forEach((tag) => formData.append("tags", tag));
 
       const res = await fetch(`${API_BASE}/api/blogs/${selectedBlog._id}`, {
         method: "PUT",
@@ -243,6 +280,8 @@ export default function Blogs() {
     setImageFile(null);
     setImagePreview(null);
     setIsEditing(false);
+    setCategory("");
+    setTags([]);
   };
 
   /* Handle Image File */
@@ -255,6 +294,32 @@ export default function Blogs() {
     }
 
     setImageFile(file);
+  };
+
+  const handleAddNewCategory = () => {
+    if (newCategory.trim()) {
+      const trimmed = newCategory.trim();
+      if (!categories.includes(trimmed)) {
+        setCategories([...categories, trimmed].sort());
+      }
+      setCategory(trimmed);
+      setNewCategory("");
+      setShowCategoryModal(false);
+    }
+  };
+
+  const handleAddNewTag = () => {
+    if (newTag.trim()) {
+      const trimmed = newTag.trim();
+      if (!availableTags.includes(trimmed)) {
+        setAvailableTags([...availableTags, trimmed].sort());
+      }
+      if (!tags.includes(trimmed)) {
+        setTags([...tags, trimmed]);
+      }
+      setNewTag("");
+      setShowTagModal(false);
+    }
   };
 
   return (
@@ -309,14 +374,21 @@ export default function Blogs() {
 
                 <div className="flex-1 flex flex-col">
                   <div className="px-4 py-3 flex-1">
-                    <div className="flex items-center gap-1 text-gray-500 mb-1">
-                      <FaRegClock className="text-gray-500 text-xs" />
-                      <span className="text-xs font-medium">
-                        {formatDate(blog.createdAt)}
-                      </span>
+                    <div className="flex items-center justify-between gap-1 mb-1">
+                      <div className="flex items-center gap-1 text-gray-400">
+                        <FaRegClock size={10} />
+                        <span className="text-[10px] font-medium">
+                          {formatDate(blog.createdAt)}
+                        </span>
+                      </div>
+                      {blog.category && (
+                        <span className="px-2 py-0.5 bg-[#345261]/10 text-[#345261] text-[10px] font-bold rounded uppercase tracking-wider">
+                          {blog.category}
+                        </span>
+                      )}
                     </div>
 
-                    <p className="font-semibold text-sm leading-tight mb-1 pt-3">
+                    <p className="font-semibold text-sm leading-tight mb-1 pt-2 line-clamp-2">
                       {blog.title}
                     </p>
                   </div>
@@ -334,9 +406,10 @@ export default function Blogs() {
                     <button
                       onClick={() => {
                         setIsEditing(true);
-                        setSelectedBlog(blog);
                         setTitle(blog.title);
                         setContent(blog.content);
+                        setCategory(blog.category || "");
+                        setTags(blog.tags || []);
                         setImagePreview(`${API_BASE}/api/blogs/view/${blog.image.split("/").pop()}`);
                         setImageFile(null);
                         setPage("add");
@@ -449,10 +522,87 @@ export default function Blogs() {
 
           <label className="block font-medium mb-1">Title</label>
           <input
-            className="w-full border px-3 py-2 rounded mb-4"
+            className="w-full border px-3 py-2 rounded mb-6"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            placeholder="Enter blog title"
           />
+
+          {/* CATEGORY & TAGS SELECTION */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            {/* Category selection */}
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Category ({categories.length})
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryModal(true)}
+                  className="text-[11px] font-bold text-[#345261] hover:text-[#1e3039] flex items-center gap-1.5 transition-colors uppercase tracking-[0.5px]"
+                >
+                  <FaPlus size={9} /> Add Category
+                </button>
+              </div>
+              <div className="relative">
+                <select
+                  className="w-full px-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-[#345261] focus:border-[#345261] bg-white appearance-none cursor-pointer pr-10 text-sm"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                >
+                  <option value="">Select Category</option>
+                  {categories.map((cat, idx) => (
+                    <option key={idx} value={cat}>
+                      {cat} {categoryCounts[cat] ? `(${categoryCounts[cat]})` : ""}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                  <FaChevronDown size={12} />
+                </div>
+              </div>
+            </div>
+
+            {/* Tags selection */}
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Tags ({availableTags.length})
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowTagModal(true)}
+                  className="text-[11px] font-bold text-[#345261] hover:text-[#1e3039] flex items-center gap-1.5 transition-colors uppercase tracking-[0.5px]"
+                >
+                  <FaPlus size={9} /> Add Tag
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-2 p-2 border border-gray-300 rounded min-h-[42px] bg-gray-50">
+                {tags.length === 0 && <span className="text-gray-400 text-xs italic">No tags selected</span>}
+                {tags.map((t, i) => (
+                  <span key={i} className="flex items-center gap-1 px-2 py-0.5 bg-[#345261]/10 text-[#345261] rounded text-xs font-medium border border-[#345261]/20">
+                    {t}
+                    <button onClick={() => setTags(tags.filter(tag => tag !== t))} className="hover:text-red-500">
+                      <FaPlus className="rotate-45" size={10} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+              
+              {/* Tag pool to select from */}
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {availableTags.filter(t => !tags.includes(t)).slice(0, 10).map((t, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setTags([...tags, t])}
+                    className="px-2 py-0.5 border border-gray-200 rounded text-[10px] text-gray-500 hover:border-[#345261] hover:text-[#345261] transition-colors"
+                  >
+                    + {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
 
           <label className="block font-medium mb-1">Content</label>
           <div className="border border-gray-300 rounded-lg mb-4 overflow-hidden">
@@ -557,14 +707,32 @@ export default function Blogs() {
 
             <h1 className="text-2xl font-semibold mb-4">{selectedBlog.title}</h1>
 
-            <div className="flex gap-2 text-gray-500 text-sm mb-6">
-              <FaCalendarAlt className="text-[#23414a]" />
-              {formatDate(selectedBlog.createdAt)} •{" "}
-              {new Date(selectedBlog.createdAt).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+            <div className="flex items-center gap-4 text-gray-500 text-sm mb-6">
+              <div className="flex items-center gap-2">
+                <FaCalendarAlt className="text-[#23414a]" />
+                {formatDate(selectedBlog.createdAt)} •{" "}
+                {new Date(selectedBlog.createdAt).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </div>
+              
+              {selectedBlog.category && (
+                <span className="px-3 py-1 bg-[#345261] text-white text-xs font-bold rounded uppercase tracking-wider">
+                  {selectedBlog.category}
+                </span>
+              )}
             </div>
+
+            {selectedBlog.tags && selectedBlog.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-6">
+                {selectedBlog.tags.map((tag, idx) => (
+                  <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-600 text-[11px] font-medium rounded border border-gray-200">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            )}
 
             <img
               src={`${API_BASE}/api/blogs/view/${selectedBlog.image.split("/").pop()}`}
@@ -577,6 +745,205 @@ export default function Blogs() {
               dangerouslySetInnerHTML={{ __html: selectedBlog.content }}
               style={{ lineHeight: "1.6", fontSize: "16px" }}
             />
+          </div>
+        </div>
+      )}
+
+      {/* ADD NEW CATEGORY MODAL */}
+      {showCategoryModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/60" onClick={() => setShowCategoryModal(false)} />
+          <div className="bg-white rounded-xl w-full max-w-md shadow-2xl p-6 relative z-10">
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Add New Category</h3>
+            <p className="text-xs text-gray-500 mb-4">Enter a new category name or select from existing ones below.</p>
+            
+            <div className="mb-6">
+              <input
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#345261] outline-none mb-4"
+                value={newCategory}
+                onChange={(e) => setNewCategory(e.target.value)}
+                placeholder="e.g. Technology, Lifestyle, Career"
+                autoFocus
+                onKeyDown={(e) => e.key === "Enter" && handleAddNewCategory()}
+              />
+
+              {/* EXISTING CATEGORIES LIST */}
+              <label className="block text-[10px] uppercase tracking-[1.5px] text-gray-500 font-bold mb-3">
+                Existing Categories
+              </label>
+              <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-2">
+                {categories.length > 0 ? (
+                  categories.map((cat, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 text-[#345261] rounded-lg text-xs font-semibold border border-gray-200 group hover:border-[#345261]/30 transition-all"
+                    >
+                      <span>{cat}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const isInUse = blogs.some(b => b.category === cat);
+                          if (isInUse) {
+                            setToast(`Cannot delete "${cat}" because it is used in some blogs.`);
+                          } else {
+                            setGeneralConfirm({
+                              title: "Delete Category?",
+                              message: `Are you sure you want to remove the empty category "${cat}"?`,
+                              onConfirm: () => {
+                                setCategories(categories.filter(c => c !== cat));
+                                if (category === cat) setCategory("");
+                                setToast("Category removed.");
+                              }
+                            });
+                          }
+                        }}
+                        className="text-gray-400 hover:text-red-500 transition-colors p-0.5"
+                      >
+                        <FaTimes size={10} />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-400 text-xs italic">No categories created yet.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <button 
+                onClick={() => {
+                  setShowCategoryModal(false);
+                  setNewCategory("");
+                }} 
+                className="px-4 py-2 text-gray-500 font-medium"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleAddNewCategory} 
+                className="px-6 py-2 bg-[#345261] text-white rounded-lg font-medium shadow-md hover:bg-[#2a4250] transition-colors"
+                disabled={!newCategory.trim()}
+              >
+                Add Category
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ADD NEW TAG MODAL */}
+      {showTagModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/60" onClick={() => setShowTagModal(false)} />
+          <div className="bg-white rounded-xl w-full max-w-md shadow-2xl p-6 relative z-10">
+            <h3 className="text-lg font-bold text-gray-800 mb-2">Add New Tag</h3>
+            <p className="text-xs text-gray-500 mb-4">Enter a new tag name or manage existing tags below.</p>
+            
+            <div className="mb-6">
+              <input
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#345261] outline-none mb-4"
+                value={newTag}
+                onChange={(e) => setNewTag(e.target.value)}
+                placeholder="e.g. React, Nodejs, Design"
+                autoFocus
+                onKeyDown={(e) => e.key === "Enter" && handleAddNewTag()}
+              />
+
+              {/* EXISTING TAGS LIST */}
+              <label className="block text-[10px] uppercase tracking-[1.5px] text-gray-500 font-bold mb-3">
+                Existing Tags
+              </label>
+              <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-2">
+                {availableTags.length > 0 ? (
+                  availableTags.map((t, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 text-[#345261] rounded-lg text-xs font-semibold border border-gray-200 group hover:border-[#345261]/30 transition-all"
+                    >
+                      <span>#{t}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const isInUse = blogs.some(b => b.tags && b.tags.includes(t));
+                          if (isInUse) {
+                            setToast(`Cannot delete "${t}" because it is used in some blogs.`);
+                          } else {
+                            setGeneralConfirm({
+                              title: "Delete Tag?",
+                              message: `Are you sure you want to remove the tag "${t}"?`,
+                              onConfirm: () => {
+                                setAvailableTags(availableTags.filter(at => at !== t));
+                                setTags(tags.filter(st => st !== t));
+                                setToast("Tag removed.");
+                              }
+                            });
+                          }
+                        }}
+                        className="text-gray-400 hover:text-red-500 transition-colors p-0.5"
+                      >
+                        <FaTimes size={10} />
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-400 text-xs italic">No tags created yet.</p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-4 border-t">
+              <button 
+                onClick={() => {
+                  setShowTagModal(false);
+                  setNewTag("");
+                }} 
+                className="px-4 py-2 text-gray-500 font-medium"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleAddNewTag} 
+                className="px-6 py-2 bg-[#345261] text-white rounded-lg font-medium shadow-md hover:bg-[#2a4250] transition-colors"
+                disabled={!newTag.trim()}
+              >
+                Add Tag
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* GENERAL CONFIRMATION MODAL */}
+      {generalConfirm && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/40" onClick={() => setGeneralConfirm(null)} />
+          <div className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl relative z-10 flex flex-col items-center text-center">
+            <div className="w-16 h-16 bg-blue-50 text-[#345261] rounded-full flex items-center justify-center mb-4">
+              <FaTimes size={24} className="opacity-20" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">
+              {generalConfirm.title}
+            </h3>
+            <p className="text-gray-600 mb-8 leading-relaxed">
+              {generalConfirm.message}
+            </p>
+            <div className="flex w-full gap-3">
+              <button
+                onClick={() => setGeneralConfirm(null)}
+                className="flex-1 py-3 px-4 border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  generalConfirm.onConfirm();
+                  setGeneralConfirm(null);
+                }}
+                className="flex-1 py-3 px-4 bg-[#345261] text-white rounded-xl font-semibold hover:bg-[#2a4250] transition-all shadow-md active:scale-95"
+              >
+                Confirm
+              </button>
+            </div>
           </div>
         </div>
       )}

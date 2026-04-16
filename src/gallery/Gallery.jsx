@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { FaTrash, FaUpload, FaEdit, FaTimes, FaChevronLeft, FaChevronRight, FaSearch } from "react-icons/fa";
+import { FaTrash, FaUpload, FaEdit, FaTimes, FaChevronLeft, FaChevronRight, FaSearch, FaChevronDown, FaPlus } from "react-icons/fa";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000";
 
 // Gallery Item Component with rounded corners and white background
-const GalleryItem = ({ item, galleryId, onDeleteClick }) => {
+const GalleryItem = ({ item, galleryId }) => {
   const [orientation, setOrientation] = useState('landscape');
 
   const handleImageLoad = (e) => {
@@ -27,15 +27,15 @@ const GalleryItem = ({ item, galleryId, onDeleteClick }) => {
 
   return (
     <div className="group relative rounded-xl overflow-hidden bg-white "
-         style={{ height: "240px" }}>
+      style={{ height: "240px" }}>
 
       <div className="w-full h-full flex items-center justify-center bg-white p-3">
         {item.type === "image" ? (
           <img
             src={`${API_BASE}/api/gallery/view/${item.url.split("/").pop()}`}
             className={
-              orientation === 'portrait' 
-                ? 'h-full w-auto max-h-full object-contain rounded-lg' 
+              orientation === 'portrait'
+                ? 'h-full w-auto max-h-full object-contain rounded-lg'
                 : 'w-full h-full object-cover rounded-lg'
             }
             alt=""
@@ -50,15 +50,6 @@ const GalleryItem = ({ item, galleryId, onDeleteClick }) => {
         )}
       </div>
 
-      {/* DELETE INDIVIDUAL ITEM BUTTON */}
-      <div className="absolute bottom-0 left-0 right-0 bg-white/90 py-2 flex items-center justify-center">
-        <button
-          onClick={() => onDeleteClick(galleryId, item)}
-          className="text-red-600 hover:text-red-800 flex items-center gap-2 font-medium text-sm mb-2"
-        >
-          <FaTrash className="text-red-500" /> Delete
-        </button>
-      </div>
     </div>
   );
 };
@@ -69,9 +60,13 @@ export default function Gallery() {
   const [galleries, setGalleries] = useState([]);
   const [tempTitle, setTempTitle] = useState("");
   const [uploadFiles, setUploadFiles] = useState([]);
-  const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [editGallery, setEditGallery] = useState(null);
   const [galleryDeleteConfirm, setGalleryDeleteConfirm] = useState(null);
+  const [category, setCategory] = useState("");
+  const [categories, setCategories] = useState([]);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCategory, setNewCategory] = useState("");
+  const [generalConfirm, setGeneralConfirm] = useState(null);
 
   /* PAGINATION STATE */
   const [currentPage, setCurrentPage] = useState(1);
@@ -91,6 +86,15 @@ export default function Gallery() {
 
       if (Array.isArray(data)) {
         setGalleries(data);
+        // Extract unique categories and their counts
+        const counts = data.reduce((acc, g) => {
+          if (g.category) {
+            acc[g.category] = (acc[g.category] || 0) + 1;
+          }
+          return acc;
+        }, {});
+        setCategories(Object.keys(counts).sort());
+        window.__categoryCounts = counts; // Temporary store for UI convenience or use state
       } else {
         setGalleries([]);
       }
@@ -102,6 +106,7 @@ export default function Gallery() {
 
   const openUploadModal = () => {
     setTempTitle("");
+    setCategory("");
     setUploadFiles([]);
     setEditGallery(null);
     setShowUploadModal(true);
@@ -110,6 +115,7 @@ export default function Gallery() {
   // Open edit modal with existing gallery data
   const openEditModal = (gallery) => {
     setTempTitle(gallery.title || "");
+    setCategory(gallery.category || "");
     setUploadFiles([]);
     setEditGallery(gallery);
     setShowUploadModal(true);
@@ -190,6 +196,7 @@ export default function Gallery() {
     try {
       const fd = new FormData();
       fd.append("title", tempTitle || "");
+      fd.append("category", category || "");
       uploadFiles.forEach((f) => fd.append("files", f.file));
 
       let res;
@@ -228,6 +235,7 @@ export default function Gallery() {
       }
 
       setTempTitle("");
+      setCategory("");
       setUploadFiles([]);
       setEditGallery(null);
       setShowUploadModal(false);
@@ -257,7 +265,7 @@ export default function Gallery() {
       }
 
       const result = await res.json();
-      
+
       if (result.deletedGallery) {
         // Gallery was deleted because it became empty
         setGalleries((prev) => prev.filter((g) => g._id !== galleryId));
@@ -270,17 +278,12 @@ export default function Gallery() {
         toast.success("Item deleted successfully");
       }
 
-      setDeleteConfirm(null);
+
     } catch (err) {
       console.error("Delete failed:", err);
       toast.error(err.message || "Delete failed");
     }
   };
-
-  // Handler for delete button click
-  const handleDeleteClick = useCallback((galleryId, item) => {
-    setDeleteConfirm({ galleryId, item });
-  }, []);
 
   // --------------------------- DELETE GALLERY ---------------------------
   const handleDeleteGallery = async (galleryId) => {
@@ -332,45 +335,49 @@ export default function Gallery() {
         {currentGalleries.map((gallery) => (
           <div key={gallery._id} className="mb-12">
             <div className="border border-gray-300 rounded-lg p-4 w-full bg-white shadow relative">
-              
+
               {/* GALLERY HEADER WITH TITLE AND ACTION BUTTONS */}
               <div className="flex justify-between items-center mb-4">
                 <div className="flex items-center gap-4">
                   {gallery.title && (
                     <h2 className="text-lg font-semibold">{gallery.title}</h2>
                   )}
-                  </div>
-                  {/* EDIT AND DELETE GALLERY BUTTONS - LEFT SIDE */}
-                  <div className="flex gap-2 ml-auto ">
-
-                    <button
-                      onClick={() => openEditModal(gallery)}
-                      className="text-[#345261] hover:text-[#2a4250] p-2 rounded-full hover:bg-gray-100 transition"
-                      title="Edit Gallery"
-                    >
-                      <FaEdit size={18} />
-                    </button>
-                    
-                    <button
-                      onClick={() => setGalleryDeleteConfirm(gallery)}
-                      className="text-[#345261] hover:text-red-600 p-2 rounded-full hover:bg-gray-100 transition"
-                      title="Delete Gallery"
-                    >
-                      <FaTrash size={18} />
-                    </button>
-                  </div>
+                  {gallery.category && (
+                    <span className="px-3 py-1 bg-[#f3c98f]/20 text-[#7a6550] text-xs font-semibold rounded-full border border-[#f3c98f]/30">
+                      {gallery.category}
+                    </span>
+                  )}
                 </div>
-              
+                {/* EDIT AND DELETE GALLERY BUTTONS - LEFT SIDE */}
+                <div className="flex gap-2 ml-auto ">
+
+                  <button
+                    onClick={() => openEditModal(gallery)}
+                    className="text-[#345261] hover:text-[#2a4250] p-2 rounded-full hover:bg-gray-100 transition"
+                    title="Edit Gallery"
+                  >
+                    <FaEdit size={18} />
+                  </button>
+
+                  <button
+                    onClick={() => setGalleryDeleteConfirm(gallery)}
+                    className="text-[#345261] hover:text-red-600 p-2 rounded-full hover:bg-gray-100 transition"
+                    title="Delete Gallery"
+                  >
+                    <FaTrash size={18} />
+                  </button>
+                </div>
+              </div>
+
 
               {/* 3 COLUMN GRID */}
-       
-                 <div className="grid grid-cols-4 gap-6 w-full">
+
+              <div className="grid grid-cols-4 gap-6 w-full">
                 {gallery.items.map((item, idx) => (
                   <GalleryItem
                     key={`${gallery._id}-${idx}`}
                     item={item}
                     galleryId={gallery._id}
-                    onDeleteClick={handleDeleteClick}
                   />
                 ))}
               </div>
@@ -400,9 +407,9 @@ export default function Gallery() {
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-all font-medium"
+                className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-[#345261] border border-gray-200 hover:border-[#345261] hover:text-white hover:bg-[#345261] disabled:opacity-30 disabled:hover:bg-white disabled:hover:border-gray-200 disabled:hover:text-[#345261] transition-all shadow-sm active:scale-95"
               >
-                <FaChevronLeft size={12} />
+                <FaChevronLeft size={16} />
               </button>
 
               <div className="flex items-center gap-2">
@@ -411,13 +418,12 @@ export default function Gallery() {
                     key={i}
                     onClick={() => typeof num === "number" && setCurrentPage(num)}
                     disabled={num === "..."}
-                    className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-semibold transition-all ${
-                      currentPage === num
+                    className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-semibold transition-all ${currentPage === num
                         ? "bg-[#345261] text-white shadow-md transform scale-105"
                         : num === "..."
-                        ? "cursor-default text-gray-400"
-                        : "hover:bg-gray-50 text-gray-600 active:bg-gray-100"
-                    }`}
+                          ? "cursor-default text-gray-400"
+                          : "hover:bg-gray-50 text-gray-600 active:bg-gray-100"
+                      }`}
                   >
                     {num}
                   </button>
@@ -427,9 +433,9 @@ export default function Gallery() {
               <button
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
-                className="p-2 w-10 h-10 flex items-center justify-center rounded-full bg-gray-50 text-gray-500 hover:bg-gray-100 disabled:opacity-30 transition-all font-medium"
+                className="w-10 h-10 flex items-center justify-center rounded-xl bg-white text-[#345261] border border-gray-200 hover:border-[#345261] hover:text-white hover:bg-[#345261] disabled:opacity-30 disabled:hover:bg-white disabled:hover:border-gray-200 disabled:hover:text-[#345261] transition-all shadow-sm active:scale-95"
               >
-                <FaChevronRight size={12} />
+                <FaChevronRight size={16} />
               </button>
             </div>
 
@@ -452,311 +458,421 @@ export default function Gallery() {
         )}
 
 
-   {/* UPLOAD/EDIT MODAL */}
-{showUploadModal && (
-  <>
-    <div
-      className="fixed inset-0 bg-black/50 z-40"
-      onClick={() => {
-        if (
-          uploadFiles.length > 0 &&
-          !window.confirm("Discard selected files?")
-        )
-          return;
-        setShowUploadModal(false);
-        setTempTitle("");
-        setUploadFiles([]);
-        setEditGallery(null);
-      }}
-    />
-
-    <div className="fixed inset-0 z-50 flex justify-center items-center p-4">
-      <div
-        className="bg-white rounded-2xl w-full max-w-3xl shadow-xl max-h-[90vh] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* MODAL HEADER - WITH CLOSE ICON */}
-        <div className="p-6 relative">
-         
-          
-          {/* CLOSE (X) ICON */}
-          <button
-            onClick={() => {
-              if (
-                uploadFiles.length > 0 &&
-                !window.confirm("Discard selected files?")
-              )
-                return;
-              setShowUploadModal(false);
-              setTempTitle("");
-              setUploadFiles([]);
-              setEditGallery(null);
-            }}
-            className="absolute top-6 right-6 text-gray-500 hover:text-gray-800"
-          >
-            <FaTimes size={24} />
-          </button>
-        </div>
-
-        <div className="p-6 overflow-y-auto flex-1">
-          {/* Title Input */}
-          <div className="mb-8">
-            <label className="block text-sm font-medium mb-3 text-gray-700">
-              Title
-            </label>
-            <input
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              value={tempTitle}
-              onChange={(e) => setTempTitle(e.target.value)}
-              placeholder="Enter gallery title"
-            />
-          </div>
-
-          {/* Dropzone */}
-          <div className="mb-8">
-            <label className="block text-sm font-medium mb-3 text-gray-700">
-              Add Files
-            </label>
-            <div className="relative">
-              <label
-                htmlFor="filePicker"
-                className="block border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:bg-gray-50 transition-colors"
-              >
-                <FaUpload className="text-gray-400 mx-auto mb-4" size={40} />
-                <p className="text-lg text-gray-700 mb-2">
-                  Drop your images/videos here, or browse
-                </p>
-                <p className="text-sm text-gray-500">
-                  Supports JPG, PNG, GIF, MP4, MOV
-                </p>
-
-                <input
-                  id="filePicker"
-                  type="file"
-                  multiple
-                  accept="image/*,video/*"
-                  onChange={handleFilesUpload}
-                  className="absolute inset-0 opacity-0 cursor-pointer"
-                />
-              </label>
-            </div>
-          </div>
-
-          {/* Horizontal Separator */}
-          <div className="border-t border-gray-200 my-8"></div>
-
-          {/* Thumbnails Preview */}
-          <div>
-            {editGallery && editGallery.items.length > 0 && (
-              <div className="mb-8">
-                <h3 className="text-lg font-medium mb-4 text-gray-800">
-                  Existing Gallery Items
-                </h3>
-                <div className="grid grid-cols-4 gap-4">
-                  {editGallery.items.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="relative overflow-hidden rounded-lg bg-gray-100 border border-gray-200 group"
-                      style={{ height: "100px" }}
-                    >
-                      <div className="w-full h-full flex items-center justify-center p-1">
-                        {item.type === "image" ? (
-                          <img
-                            src={`${API_BASE}/api/gallery/view/${item.url.split("/").pop()}`}
-                            className="max-h-full max-w-full object-cover rounded"
-                            alt=""
-                            onError={(e) => {
-                              e.target.onerror = null;
-                              e.target.src = `https://placehold.co/100x100/e0e0e0/666?text=IMG`;
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-800 rounded flex items-center justify-center">
-                            <div className="text-white text-center">
-                              <div className="text-xs mb-1">VIDEO</div>
-                              <div className="text-xl">▶</div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* DELETE/REMOVE ICON FOR EXISTING ITEMS */}
-                      <button
-                        onClick={() => {
-                          if (window.confirm("Are you sure you want to remove this item from the gallery?")) {
-                            // Call delete API for this specific item
-                            handleDelete(editGallery._id, item);
-                            // Close the modal and refresh
-                            setShowUploadModal(false);
-                            loadGalleries();
-                          }
-                        }}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
-                        title="Remove item"
-                      >
-                        ✕
-                      </button>
-                      
-                      {/* Item number indicator */}
-                      <div className="absolute bottom-1 left-1 bg-black/60 text-white text-xs rounded px-2 py-1">
-                        #{idx + 1}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  Click the ✕ icon to remove items from the gallery
-                </p>
-              </div>
-            )}
-
-            {uploadFiles.length > 0 && (
-              <div>
-                <h3 className="text-lg font-medium mb-4 text-gray-800">
-                  New Files
-                </h3>
-                <div className="grid grid-cols-4 gap-4">
-                  {uploadFiles.map((file) => (
-                    <div
-                      key={file.id}
-                      className="relative overflow-hidden rounded-lg bg-gray-100 border border-gray-200"
-                      style={{ height: "100px" }}
-                    >
-                      <div className="w-full h-full flex items-center justify-center p-1">
-                        {file.type === "image" ? (
-                          <img
-                            src={file.src}
-                            className="max-h-full max-w-full object-cover rounded"
-                            alt=""
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-gray-800 rounded flex items-center justify-center">
-                            <div className="text-white text-center">
-                              <div className="text-xs mb-1">VIDEO</div>
-                              <div className="text-xl">▶</div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => removeUploadFile(file.id)}
-                        className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
-                      >
-                        ✕
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* FOOTER - SIMPLE BUTTONS */}
-        <div className="p-6 border-t flex justify-end gap-4">
-          <button
-            onClick={() => {
-              if (
-                uploadFiles.length > 0 &&
-                !window.confirm("Discard changes?")
-              )
-                return;
-              setShowUploadModal(false);
-              setTempTitle("");
-              setUploadFiles([]);
-              setEditGallery(null);
-            }}
-            className="px-6 py-3 text-red-600  rounded-lg  font-medium"
-          >
-            Discard
-          </button>
-
-          <button
-  onClick={handleUploadSubmit}
-  disabled={uploadFiles.length === 0 && !editGallery}
-  className={`px-6 py-3 rounded-lg font-medium ${
-    uploadFiles.length > 0 || editGallery
-      ? "text-white"
-      : "bg-gray-200 text-gray-400 cursor-not-allowed"
-  }`}
-  style={
-    uploadFiles.length > 0 || editGallery
-      ? { backgroundColor: "#325160" }
-      : {}
-  }
-  onMouseEnter={(e) => {
-    if (uploadFiles.length > 0 || editGallery)
-      e.target.style.backgroundColor = "#29424D"; // darker hover color
-  }}
-  onMouseLeave={(e) => {
-    if (uploadFiles.length > 0 || editGallery)
-      e.target.style.backgroundColor = "#325160";
-  }}
->
-  {editGallery ? "Update Gallery" : "Upload"}
-</button>
-
-        </div>
-      </div>
-    </div>
-  </>
-)}
-        {deleteConfirm && (
+        {/* UPLOAD/EDIT MODAL */}
+        {showUploadModal && (
           <>
             <div
-              className="fixed inset-0 bg-black/40 z-40"
-              onClick={() => setDeleteConfirm(null)}
+              className="fixed inset-0 bg-black/50 z-40"
+              onClick={() => {
+                if (uploadFiles.length > 0) {
+                  setGeneralConfirm({
+                    title: "Discard Changes?",
+                    message: "Are you sure you want to discard the selected files?",
+                    onConfirm: () => {
+                      setShowUploadModal(false);
+                      setTempTitle("");
+                      setUploadFiles([]);
+                      setEditGallery(null);
+                      setGeneralConfirm(null);
+                    }
+                  });
+                  return;
+                }
+                setShowUploadModal(false);
+                setTempTitle("");
+                setUploadFiles([]);
+                setEditGallery(null);
+              }}
             />
 
-            <div className="fixed inset-0 flex justify-center items-center z-50">
-              <div className="bg-white rounded-2xl p-8 w-96 shadow-xl">
-                <div className="mb-4 text-center">
-                  <div className="overflow-hidden mx-auto w-48 h-48 flex items-center justify-center bg-gray-50">
-                    {deleteConfirm.item.type === "image" ? (
-                      <img
-                        src={`${API_BASE}/api/gallery/view/${deleteConfirm.item.url.split("/").pop()}`}
-                        className="max-h-full max-w-full object-contain"
-                        alt=""
+            <div className="fixed inset-0 z-50 flex justify-center items-center p-4">
+              <div
+                className="bg-white rounded-2xl w-full max-w-3xl shadow-xl max-h-[90vh] flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* MODAL HEADER - WITH CLOSE ICON */}
+                <div className="p-6 relative">
+
+
+                  {/* CLOSE (X) ICON */}
+                  <button
+                    onClick={() => {
+                      if (uploadFiles.length > 0) {
+                        setGeneralConfirm({
+                          title: "Discard Files?",
+                          message: "Are you sure you want to discard your selected files?",
+                          onConfirm: () => {
+                            setShowUploadModal(false);
+                            setTempTitle("");
+                            setUploadFiles([]);
+                            setEditGallery(null);
+                            setGeneralConfirm(null);
+                          }
+                        });
+                        return;
+                      }
+                      setShowUploadModal(false);
+                      setTempTitle("");
+                      setUploadFiles([]);
+                      setEditGallery(null);
+                    }}
+                    className="absolute top-6 right-6 text-gray-500 hover:text-gray-800"
+                  >
+                    <FaTimes size={24} />
+                  </button>
+                </div>
+
+                <div className="p-6 overflow-y-auto flex-1">
+                  {/* Title and Category Inputs */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div>
+                      <label className="block text-sm font-medium mb-3 text-gray-700">
+                        Title
+                      </label>
+                      <input
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        value={tempTitle}
+                        onChange={(e) => setTempTitle(e.target.value)}
+                        placeholder="Enter gallery title"
                       />
-                    ) : (
-                      <video
-                        src={`${API_BASE}/api/gallery/view/${deleteConfirm.item.url.split("/").pop()}`}
-                        className="max-h-full max-w-full object-contain"
-                        controls
-                      />
+                    </div>
+                    <div>
+                      <div className="flex justify-between items-center mb-3">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Category ({categories.length})
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setShowCategoryModal(true)}
+                          className="text-[11px] font-bold text-[#345261] hover:text-[#1e3039] flex items-center gap-1.5 transition-colors uppercase tracking-[0.5px] opacity-90 hover:opacity-100"
+                        >
+                          <FaPlus size={9} strokeWidth={2} />Add Category
+                        </button>
+                      </div>
+                      <div className="relative h-[50px]">
+                        <select
+                          className="w-full h-full px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer pr-10 text-gray-700 font-medium"
+                          value={category}
+                          onChange={(e) => setCategory(e.target.value)}
+                        >
+                          <option value="">Select Category</option>
+                          {categories.map((cat, idx) => (
+                            <option key={idx} value={cat}>
+                              {cat} {window.__categoryCounts?.[cat] ? `(${window.__categoryCounts[cat]})` : ""}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                          <FaChevronDown size={14} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Dropzone */}
+                  <div className="mb-8">
+                    <label className="block text-sm font-medium mb-3 text-gray-700">
+                      Add Files
+                    </label>
+                    <div className="relative">
+                      <label
+                        htmlFor="filePicker"
+                        className="block border-2 border-dashed border-gray-300 rounded-xl p-10 text-center cursor-pointer hover:bg-gray-50 transition-colors"
+                      >
+                        <FaUpload className="text-gray-400 mx-auto mb-4" size={40} />
+                        <p className="text-lg text-gray-700 mb-2">
+                          Drop your images/videos here, or browse
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          Supports JPG, PNG, GIF, MP4, MOV
+                        </p>
+
+                        <input
+                          id="filePicker"
+                          type="file"
+                          multiple
+                          accept="image/*,video/*"
+                          onChange={handleFilesUpload}
+                          className="absolute inset-0 opacity-0 cursor-pointer"
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Horizontal Separator */}
+                  <div className="border-t border-gray-200 my-8"></div>
+
+                  {/* Thumbnails Preview */}
+                  <div>
+                    {editGallery && editGallery.items.length > 0 && (
+                      <div className="mb-8">
+                        <h3 className="text-lg font-medium mb-4 text-gray-800">
+                          Existing Gallery Items
+                        </h3>
+                        <div className="grid grid-cols-3 gap-4">
+                          {editGallery.items.map((item, idx) => (
+                            <div
+                              key={idx}
+                              className="relative overflow-hidden rounded-xl bg-gray-100 border border-gray-200 group shadow-sm hover:shadow-md transition-shadow"
+                              style={{ height: "160px" }}
+                            >
+                              <div className="w-full h-full">
+                                {item.type === "image" ? (
+                                  <img
+                                    src={`${API_BASE}/api/gallery/view/${item.url.split("/").pop()}`}
+                                    className="w-full h-full object-cover"
+                                    alt=""
+                                    onError={(e) => {
+                                      e.target.onerror = null;
+                                      e.target.src = `https://placehold.co/100x100/e0e0e0/666?text=IMG`;
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                                    <div className="text-white text-center">
+                                      <div className="text-xs mb-1">VIDEO</div>
+                                      <div className="text-xl">▶</div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              {/* DELETE/REMOVE BAR FOR EXISTING ITEMS */}
+                              <button
+                                onClick={() => {
+                                  setGeneralConfirm({
+                                    title: "Remove Item?",
+                                    message: "Are you sure you want to remove this item from the gallery?",
+                                    onConfirm: () => {
+                                      handleDelete(editGallery._id, item);
+                                      setShowUploadModal(false);
+                                      loadGalleries();
+                                      setGeneralConfirm(null);
+                                    }
+                                  });
+                                }}
+                                className="absolute bottom-0 left-0 right-0 bg-white/95 hover:bg-white text-red-600 py-1.5 flex items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider border-t border-gray-100 transition-all z-10"
+                                title="Remove item"
+                              >
+                                <FaTrash size={10} className="text-red-500" /> Delete
+                              </button>
+
+                              {/* Item number indicator - moved to top for visibility */}
+                              <div className="absolute top-1 left-1 bg-black/60 text-white text-[9px] rounded px-1.5 py-0.5 z-10 font-bold">
+                                #{idx + 1}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Click the ✕ icon to remove items from the gallery
+                        </p>
+                      </div>
+                    )}
+
+                    {uploadFiles.length > 0 && (
+                      <div>
+                        <h3 className="text-lg font-medium mb-4 text-gray-800">
+                          New Files
+                        </h3>
+                        <div className="grid grid-cols-3 gap-4">
+                          {uploadFiles.map((file) => (
+                            <div
+                              key={file.id}
+                              className="relative overflow-hidden rounded-xl bg-gray-100 border border-gray-200 shadow-sm hover:shadow-md transition-shadow"
+                              style={{ height: "160px" }}
+                            >
+                              <div className="w-full h-full">
+                                {file.type === "image" ? (
+                                  <img
+                                    src={file.src}
+                                    className="w-full h-full object-cover"
+                                    alt=""
+                                  />
+                                ) : (
+                                  <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                                    <div className="text-white text-center">
+                                      <div className="text-xs mb-1">VIDEO</div>
+                                      <div className="text-xl">▶</div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              <button
+                                onClick={() => removeUploadFile(file.id)}
+                                className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs hover:bg-red-600"
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                <h3 className="text-xl font-semibold text-center mb-2">
-                  Delete Item?
-                </h3>
-
-                <p className="text-center text-gray-600 mb-6">
-                  Are you sure you want to delete this item?
-                </p>
-
-                <div className="flex justify-center gap-4">
+                {/* FOOTER - SIMPLE BUTTONS */}
+                <div className="p-6 border-t flex justify-end gap-4">
                   <button
-                    onClick={() => setDeleteConfirm(null)}
-                    className="px-6 py-2 border rounded hover:bg-gray-50"
+                    onClick={() => {
+                      if (uploadFiles.length > 0) {
+                        setGeneralConfirm({
+                          title: "Discard Changes?",
+                          message: "Are you sure you want to discard your changes?",
+                          onConfirm: () => {
+                            setShowUploadModal(false);
+                            setTempTitle("");
+                            setUploadFiles([]);
+                            setEditGallery(null);
+                            setGeneralConfirm(null);
+                          }
+                        });
+                        return;
+                      }
+                      setShowUploadModal(false);
+                      setTempTitle("");
+                      setUploadFiles([]);
+                      setEditGallery(null);
+                    }}
+                    className="px-6 py-3 text-red-600  rounded-lg  font-medium"
                   >
-                    Cancel
+                    Discard
                   </button>
 
                   <button
-                    onClick={() =>
-                      handleDelete(deleteConfirm.galleryId, deleteConfirm.item)
+                    onClick={handleUploadSubmit}
+                    disabled={uploadFiles.length === 0 && !editGallery}
+                    className={`px-6 py-3 rounded-lg font-medium ${uploadFiles.length > 0 || editGallery
+                        ? "text-white"
+                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                      }`}
+                    style={
+                      uploadFiles.length > 0 || editGallery
+                        ? { backgroundColor: "#325160" }
+                        : {}
                     }
-                    className="px-6 py-2 bg-red-600 text-red rounded "
+                    onMouseEnter={(e) => {
+                      if (uploadFiles.length > 0 || editGallery)
+                        e.target.style.backgroundColor = "#29424D"; // darker hover color
+                    }}
+                    onMouseLeave={(e) => {
+                      if (uploadFiles.length > 0 || editGallery)
+                        e.target.style.backgroundColor = "#325160";
+                    }}
                   >
-                    Delete
+                    {editGallery ? "Update Gallery" : "Upload"}
+                  </button>
+
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* ADD NEW CATEGORY MODAL */}
+        {showCategoryModal && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/60 z-[60]"
+              onClick={() => setShowCategoryModal(false)}
+            />
+            <div className="fixed inset-0 z-[70] flex justify-center items-center p-4">
+              <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl p-6">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">Add New Category</h3>
+                <div className="mb-6">
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                    Category Name
+                  </label>
+                  <input
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={newCategory}
+                    onChange={(e) => setNewCategory(e.target.value)}
+                    placeholder="e.g. Wedding, Nature, Event"
+                    autoFocus
+                  />
+                </div>
+
+                {/* EXISTING CATEGORIES LIST */}
+                <div className="mb-6">
+                  <label className="block text-[10px] uppercase tracking-[1.5px] text-gray-500 font-bold mb-3">
+                    Available Categories
+                  </label>
+                  <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-2 scrollbar-thin">
+                    {categories.length > 0 ? (
+                      categories.map((cat, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 text-[#345261] rounded-lg text-xs font-semibold border border-gray-200 group hover:border-[#345261]/30 transition-all"
+                        >
+                          <span>{cat}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              // Check if category is in use
+                              const isInUse = galleries.some(g => g.category === cat);
+                              
+                              if (isInUse) {
+                                toast.error(`Cannot delete "${cat}" because it contains galleries. Please delete or reassign the galleries first.`);
+                              } else {
+                                setGeneralConfirm({
+                                  title: "Delete Category?",
+                                  message: `Are you sure you want to remove the empty category "${cat}"?`,
+                                  onConfirm: () => {
+                                    setCategories(categories.filter(c => c !== cat));
+                                    if (category === cat) setCategory("");
+                                    toast.success("Category removed.");
+                                    setGeneralConfirm(null);
+                                  }
+                                });
+                              }
+                            }}
+                            className="text-gray-400 hover:text-red-500 transition-colors p-0.5"
+                            title="Delete Category"
+                          >
+                            <FaTimes size={10} />
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-400 text-xs italic py-2">No categories created yet.</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3">
+                  <button
+                    onClick={() => {
+                      setShowCategoryModal(false);
+                      setNewCategory("");
+                    }}
+                    className="px-5 py-2 text-gray-500 font-medium hover:text-gray-700 transition"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (newCategory.trim()) {
+                        if (!categories.includes(newCategory.trim())) {
+                          setCategories([...categories, newCategory.trim()]);
+                        }
+                        setCategory(newCategory.trim());
+                        setNewCategory("");
+                        setShowCategoryModal(false);
+                        toast.success("Category added and selected!");
+                      } else {
+                        toast.error("Please enter a category name");
+                      }
+                    }}
+                    className="px-6 py-2 bg-[#345261] text-white rounded-lg font-medium hover:bg-[#2a4250] transition shadow-md"
+                  >
+                    Add Category
                   </button>
                 </div>
               </div>
             </div>
           </>
         )}
+
 
         {/* DELETE GALLERY CONFIRM MODAL */}
         {galleryDeleteConfirm && (
@@ -779,7 +895,7 @@ export default function Gallery() {
                 </h3>
 
                 <p className="text-center text-gray-600 mb-6">
-                  Are you sure you want to delete the entire gallery "<strong>{galleryDeleteConfirm.title}</strong>"? 
+                  Are you sure you want to delete the entire gallery "<strong>{galleryDeleteConfirm.title}</strong>"?
                   This will delete all {galleryDeleteConfirm.items.length} items in this gallery.
                 </p>
 
@@ -803,7 +919,7 @@ export default function Gallery() {
           </>
         )}
 
- {/* Toast Container with custom styling */}
+        {/* Toast Container with custom styling */}
         <ToastContainer
           position="top-right"
           autoClose={3000}
@@ -815,8 +931,54 @@ export default function Gallery() {
           draggable
           pauseOnHover
         />
-<style>
-{`
+
+        {/* GENERAL CONFIRMATION MODAL (Replaces window.confirm) */}
+        {generalConfirm && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/40 z-[100]"
+              onClick={() => setGeneralConfirm(null)}
+            />
+            <div className="fixed inset-0 flex justify-center items-center z-[110] p-4 pointer-events-none">
+              <div 
+                className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200 pointer-events-auto"
+                onClick={e => e.stopPropagation()}
+              >
+                <div className="text-center">
+                  <div className="w-16 h-16 bg-blue-50 text-[#345261] rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FaTimes size={24} className="opacity-20" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-800 mb-2">
+                    {generalConfirm.title}
+                  </h3>
+                  <p className="text-gray-600 mb-8 leading-relaxed">
+                    {generalConfirm.message}
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setGeneralConfirm(null)}
+                      className="flex-1 py-3 px-4 border border-gray-200 text-gray-600 rounded-xl font-semibold hover:bg-gray-50 transition-all"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        generalConfirm.onConfirm();
+                        setGeneralConfirm(null);
+                      }}
+                      className="flex-1 py-3 px-4 bg-[#345261] text-white rounded-xl font-semibold hover:bg-[#2a4250] transition-all shadow-md active:scale-95"
+                    >
+                      Confirm
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        <style>
+          {`
   /* PROGRESS BAR */
   .Toastify__progress-bar,
   .Toastify__progress-bar--animated,
@@ -859,7 +1021,7 @@ export default function Gallery() {
     color: #345261 !important;
   }
 `}
-</style>
+        </style>
 
 
       </div>

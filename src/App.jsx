@@ -38,6 +38,7 @@ export default function App() {
           <Route path="access" element={<BillRouteStub />} />
           <Route path="invoice" element={<BillRouteStub />} />
           <Route path="quotation" element={<BillRouteStub />} />
+          <Route path="client" element={<BillRouteStub />} />
           <Route path="enquiries" element={<BillRouteStub />} />
         </Route>
 

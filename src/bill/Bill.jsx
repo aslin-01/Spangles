@@ -8,6 +8,7 @@ import Gallary from "../gallery/Gallery";
 import Blogs from "../blogs/Blogs"; 
 import UserAccess from "../useraccess/UserAccess";
 import Enquiries from "../enquiries/Enquiries";
+import Client from "../client/Client";
 import { useNavigate, useLocation, Outlet } from "react-router-dom";
 import Navbar from "../sidebar/Sidebar";
 
@@ -22,6 +23,7 @@ const SECTION_PATH = {
   quotation: "/quotation",
   enquiries: "/enquiries",
   "user-access": "/access",
+  client: "/client",
 };
 
 function pathnameToSection(pathname) {
@@ -42,6 +44,7 @@ function canAccessPage(u, name) {
     job: a.job,
     quotation: a.quotation,
     enquiries: a.enquiries,
+    client: a.client,
   };
   return !!map[name];
 }
@@ -445,6 +448,7 @@ export default function Bill() {
   if (a.job) return "job";
   if (a.invoice) return "invoice";
   if (a.quotation) return "quotation";
+  if (a.client) return "client";
 
   return null;
 }
@@ -1219,6 +1223,9 @@ useEffect(() => {
 
         ) : page === "enquiries" && (user?.role === "admin" || user?.access?.enquiries) ? (
           <Enquiries showToast={showToast} />
+
+        ) : page === "client" && (user?.role === "admin" || user?.access?.client) ? (
+          <Client showToast={showToast} />
 
         ) : page === "user-access" && user?.role === "admin" ? (
           <UserAccess />

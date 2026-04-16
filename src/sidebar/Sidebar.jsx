@@ -20,9 +20,9 @@ export default function Navbar({ page, goToSection, btn }) {
                 <div className="flex-1 min-h-0 overflow-y-auto pr-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
                     {/* Brand Text inside scrollable area */}
                     <div className="mb-10 flex flex-col items-center select-none pt-4">
-                        <img 
-                            src="/side-logo.png" 
-                            alt="Logo" 
+                        <img
+                            src="/side-logo.png"
+                            alt="Logo"
                             className="w-40 h-auto object-contain"
                             onError={(e) => {
                                 e.target.onerror = null;
@@ -56,8 +56,9 @@ export default function Navbar({ page, goToSection, btn }) {
                                 <span className="text-[10px] uppercase tracking-widest text-white whitespace-nowrap">Billing</span>
                                 <div className="flex-1 h-px bg-white/30"></div>
                             </div>
-                            <button onClick={() => goToSection("invoice")} className={btn("invoice")}>Invoice</button>
                             <button onClick={() => goToSection("quotation")} className={btn("quotation")}>Quotation</button>
+                            <button onClick={() => goToSection("invoice")} className={btn("invoice")}>Invoice</button>
+                            <button onClick={() => goToSection("client")} className={btn("client")}>Client</button>
 
                             {/* SETTINGS group */}
                             <div className="flex items-center gap-2 mt-4 mb-2">
@@ -105,7 +106,7 @@ export default function Navbar({ page, goToSection, btn }) {
                             )}
 
                             {/* BILLING group */}
-                            {(user.access?.invoice || user.access?.quotation) && (
+                            {(user.access?.invoice || user.access?.quotation || user.access?.client) && (
                                 <div className="flex items-center gap-2 mt-4 mb-2">
                                     <span className="text-[10px] uppercase tracking-widest text-white whitespace-nowrap">Billing</span>
                                     <div className="flex-1 h-px bg-white/30"></div>
@@ -116,6 +117,9 @@ export default function Navbar({ page, goToSection, btn }) {
                             )}
                             {user.access?.quotation && (
                                 <button onClick={() => goToSection("quotation")} className={btn("quotation")}>Quotation</button>
+                            )}
+                            {user.access?.client && (
+                                <button onClick={() => goToSection("client")} className={btn("client")}>Client</button>
                             )}
                         </>
                     )}
