@@ -14,7 +14,14 @@ export default function Client({ showToast }) {
       const res = await fetch("http://localhost:5000/api/clients");
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
-      setClients(data);
+      const total = data.length;
+      const clientsWithIds = data.map((c, index) => {
+        if (c.clientId) return c;
+        // Fallback: Assign CL001 to the oldest record and increment for newer ones
+        const num = String(total - index).padStart(3, "0");
+        return { ...c, clientId: `CL${num}` };
+      });
+      setClients(clientsWithIds);
     } catch (error) {
       console.error("Error fetching clients:", error);
       if (showToast) showToast("Error fetching clients");
@@ -79,6 +86,25 @@ export default function Client({ showToast }) {
 
   const isGmail = (email) => /^[a-zA-Z0-9._%+-]+@gmail\.com$/i.test(email);
 
+  const getNextClientId = (records = []) => {
+    const prefix = "CL";
+    const last =
+      records
+        .map((c) => {
+          const cid = String(c.clientId || "");
+          const idMatch = cid.match(/CL(\d+)/) || cid.match(/^(\d+)$/);
+          return idMatch ? parseInt(idMatch[1] || idMatch[0], 10) : NaN;
+        })
+        .filter((n) => !isNaN(n))
+        .sort((a, b) => b - a)[0] || 0;
+    return prefix + (last + 1).toString().padStart(3, "0");
+  };
+
+  const onlyDigitsMax = (value, maxLen) => {
+    const digits = (value || "").replace(/\D/g, "");
+    return digits.slice(0, maxLen);
+  };
+
   const handleAddSubmit = async (e) => {
     e.preventDefault();
     const { name, email, phone, address } = formData;
@@ -92,14 +118,22 @@ export default function Client({ showToast }) {
     }
 
     try {
+      const payload = {
+        ...formData,
+        clientId: getNextClientId(clients)
+      };
       const res = await fetch("http://localhost:5000/api/clients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error("Failed to add client");
       const data = await res.json();
-      setClients([data, ...clients]);
+      const returnedClient = {
+        ...data,
+        clientId: data.clientId || getNextClientId(clients)
+      };
+      setClients([returnedClient, ...clients]);
       setShowModal(false);
       setFormData({ 
         name: "", email: "", phone: "", address: "",
@@ -132,6 +166,28 @@ export default function Client({ showToast }) {
     } finally {
       setShowDeleteModal(false);
       setDeleteTarget(null);
+    }
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (viewMode === 'view' || !selectedClient) return;
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/clients/${selectedClient._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(selectedClient)
+      });
+
+      if (!res.ok) throw new Error("Failed to update client");
+
+      setClients(clients.map(c => c._id === selectedClient._id ? selectedClient : c));
+      if (showToast) showToast("Client updated successfully");
+      setViewMode('view');
+    } catch (error) {
+      console.error("Error updating client:", error);
+      if (showToast) showToast("Error updating client");
     }
   };
 
@@ -174,6 +230,7 @@ export default function Client({ showToast }) {
           <thead className="bg-[#345261] text-white">
             <tr>
               <th className="py-4 px-6 text-left w-16 whitespace-nowrap">Sl No</th>
+              <th className="py-4 px-6 text-left whitespace-nowrap">Client ID</th>
               <th className="py-4 px-6 text-left whitespace-nowrap">Client Name</th>
               <th className="py-4 px-6 text-left whitespace-nowrap">Business Name</th>
               <th className="py-4 px-6 text-left whitespace-nowrap">Phone</th>
@@ -186,6 +243,7 @@ export default function Client({ showToast }) {
               current.map((client, index) => (
                 <tr key={client._id} className="hover:bg-gray-50 text-left transition-colors">
                   <td className="px-6 py-4">{indexOfLast - recordsPerPage + index + 1}</td>
+                  <td className="px-6 py-4 font-medium text-gray-800">{client.clientId || "—"}</td>
                   <td className="px-6 py-4 font-medium text-gray-800">{client.name}</td>
                   <td className="px-6 py-4 text-gray-600">{client.businessName || "—"}</td>
                   <td className="px-6 py-4">{client.phone || "—"}</td>
@@ -216,7 +274,7 @@ export default function Client({ showToast }) {
               ))
             ) : (
               <tr>
-                <td colSpan="6" className="px-6 py-10 text-center text-gray-500">
+                <td colSpan="7" className="px-6 py-10 text-center text-gray-500">
                   <p className="text-lg">No clients found</p>
                 </td>
               </tr>
@@ -331,7 +389,7 @@ export default function Client({ showToast }) {
                       type="tel"
                       required
                       value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, phone: onlyDigitsMax(e.target.value, 10) })}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white transition duration-150 ease-in-out focus:outline-none focus:border-[#345261]"
                       placeholder="Phone Number"
                     />
@@ -377,7 +435,7 @@ export default function Client({ showToast }) {
                     <input
                       type="tel"
                       value={formData.businessPhone}
-                      onChange={(e) => setFormData({ ...formData, businessPhone: e.target.value })}
+                      onChange={(e) => setFormData({ ...formData, businessPhone: onlyDigitsMax(e.target.value, 10) })}
                       className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-white transition duration-150 ease-in-out focus:outline-none focus:border-[#345261]"
                       placeholder="Business Phone Number"
                     />
@@ -434,18 +492,20 @@ export default function Client({ showToast }) {
                 <button type="button" onClick={() => { setViewMode(null); setSelectedClient(null); }} className="text-2xl hover:text-gray-200 leading-none">&times;</button>
               </div>
             </div>
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              if (viewMode === 'view') return;
-              
-              setClients(clients.map(c => c._id === selectedClient._id ? selectedClient : c));
-              if (showToast) showToast("Client updated successfully");
-              setViewMode('view');
-            }} className="p-6 w-full max-h-[85vh] overflow-y-auto">
+            <form onSubmit={handleEditSubmit} className="p-6 w-full max-h-[85vh] overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Personal Details */}
                 <div className="space-y-4">
                   <h3 className="font-semibold text-gray-700 border-b pb-2">Client Details</h3>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Client ID</label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={selectedClient.clientId || ''}
+                      className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-600 outline-none"
+                    />
+                  </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
                     <input
@@ -473,7 +533,7 @@ export default function Client({ showToast }) {
                       type="tel"
                       readOnly={viewMode === 'view'}
                       value={selectedClient.phone || ''}
-                      onChange={(e) => setSelectedClient({ ...selectedClient, phone: e.target.value })}
+                      onChange={(e) => setSelectedClient({ ...selectedClient, phone: onlyDigitsMax(e.target.value, 10) })}
                       className={`w-full px-4 py-2 border border-gray-200 rounded-lg transition duration-150 ease-in-out ${viewMode === 'view' ? 'bg-gray-50 text-gray-600 outline-none' : 'bg-white focus:outline-none focus:border-[#345261]'}`}
                     />
                   </div>
@@ -518,7 +578,7 @@ export default function Client({ showToast }) {
                       type="tel"
                       readOnly={viewMode === 'view'}
                       value={selectedClient.businessPhone || ''}
-                      onChange={(e) => setSelectedClient({ ...selectedClient, businessPhone: e.target.value })}
+                      onChange={(e) => setSelectedClient({ ...selectedClient, businessPhone: onlyDigitsMax(e.target.value, 10) })}
                       className={`w-full px-4 py-2 border border-gray-200 rounded-lg transition duration-150 ease-in-out ${viewMode === 'view' ? 'bg-gray-50 text-gray-600 outline-none' : 'bg-white focus:outline-none focus:border-[#345261]'}`}
                     />
                   </div>

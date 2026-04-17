@@ -1,15 +1,45 @@
 import React, { useState } from "react";
 import { FaSignOutAlt } from "react-icons/fa";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
-export default function Navbar({ page, goToSection, btn }) {
+export default function Navbar() {
     const user = JSON.parse(sessionStorage.getItem("user"));
     const navigate = useNavigate();
+    const location = useLocation();
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
     const handleLogout = () => {
         sessionStorage.removeItem("user");
         navigate("/login", { replace: true });
+    };
+
+    const SECTION_PATH = {
+        applicants: "/applicants",
+        blogs: "/blogs",
+        gallery: "/gallery",
+        invoice: "/invoice",
+        job: "/job",
+        quotation: "/quotation",
+        enquiries: "/enquiries",
+        "user-access": "/access",
+        client: "/client",
+    };
+
+    const pathnameToSection = (pathname) => {
+        const found = Object.entries(SECTION_PATH).find(([, p]) => p === pathname);
+        return found ? found[0] : null;
+    };
+
+    const page = pathnameToSection(location.pathname);
+
+    const btn = (name) =>
+        `w-full text-left px-4 py-3 rounded mb-2 ${
+            page === name ? "bg-[#23414a]" : "hover:bg-[#24343b]"
+        }`;
+
+    const goToSection = (name) => {
+        const path = SECTION_PATH[name];
+        if (path) navigate(path);
     };
 
     return (

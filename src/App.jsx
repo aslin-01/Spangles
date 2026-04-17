@@ -1,45 +1,59 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useOutletContext } from "react-router-dom";
 
 import Login from "./login/Login";
-import Bill from "./bill/Bill";
+import DashboardLayout from "./layout/DashboardLayout";
+
+// Components
+import JobPost from "./job/JobPost";
+import Applicants from "./applicants/Applicants";
+import Gallery from "./gallery/Gallery";
+import Blogs from "./blogs/Blogs"; 
+import UserAccess from "./useraccess/UserAccess";
+import Enquiries from "./enquiries/Enquiries";
+import Client from "./client/Client";
+import Invoice from "./Invoice/Invoice";
+import Quotations from "./Quotations/Quotations";
 
 import './index.css';
+
 const PrivateRoute = ({ children }) => {
   const user = sessionStorage.getItem("user");
   return user ? children : <Navigate to="/login" replace />;
 };
 
-/** Renders nothing; exists so nested routes match and Bill’s <Outlet /> stays active. */
-function BillRouteStub() {
-  return null;
-}
+/** Wrapper for components that need showToast */
+const WithToast = ({ Component }) => {
+  const { showToast } = useOutletContext();
+  return <Component showToast={showToast} />;
+};
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-
         {/* Login Page */}
         <Route path="/login" element={<Login />} />
 
-        {/* Dashboard shell: one Bill instance for all section paths */}
+        {/* Protected Dashboard Routes */}
         <Route
           element={
             <PrivateRoute>
-              <Bill />
+              <DashboardLayout />
             </PrivateRoute>
           }
         >
-          <Route path="dashboard" element={<BillRouteStub />} />
-          <Route path="applicants" element={<BillRouteStub />} />
-          <Route path="blogs" element={<BillRouteStub />} />
-          <Route path="gallery" element={<BillRouteStub />} />
-          <Route path="job" element={<BillRouteStub />} />
-          <Route path="access" element={<BillRouteStub />} />
-          <Route path="invoice" element={<BillRouteStub />} />
-          <Route path="quotation" element={<BillRouteStub />} />
-          <Route path="client" element={<BillRouteStub />} />
-          <Route path="enquiries" element={<BillRouteStub />} />
+          {/* Default dashboard redirect handled in DashboardLayout */}
+          <Route path="dashboard" element={null} />
+          
+          <Route path="applicants" element={<WithToast Component={Applicants} />} />
+          <Route path="enquiries" element={<WithToast Component={Enquiries} />} />
+          <Route path="job" element={<JobPost />} />
+          <Route path="blogs" element={<Blogs />} />
+          <Route path="gallery" element={<Gallery />} />
+          <Route path="quotation" element={<WithToast Component={Quotations} />} />
+          <Route path="invoice" element={<WithToast Component={Invoice} />} />
+          <Route path="client" element={<WithToast Component={Client} />} />
+          <Route path="access" element={<UserAccess />} />
         </Route>
 
         {/* Default Route */}
