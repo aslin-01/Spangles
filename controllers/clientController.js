@@ -14,7 +14,7 @@ export const getClients = async (req, res) => {
 export const createClient = async (req, res) => {
   try {
     const { 
-      name, email, phone, address, 
+      clientId, name, email, phone, address, 
       businessName, businessEmail, businessPhone, businessAddress 
     } = req.body;
 
@@ -23,7 +23,7 @@ export const createClient = async (req, res) => {
     }
 
     const newClient = new Client({
-      name, email, phone, address,
+      clientId, name, email, phone, address,
       businessName, businessEmail, businessPhone, businessAddress
     });
 
@@ -47,5 +47,23 @@ export const deleteClient = async (req, res) => {
     res.status(200).json({ message: 'Client deleted successfully' });
   } catch (error) {
     res.status(500).json({ message: 'Error deleting client', error: error.message });
+  }
+};
+
+// Update a client
+export const updateClient = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    const updatedClient = await Client.findByIdAndUpdate(id, updateData, { new: true });
+    
+    if (!updatedClient) {
+      return res.status(404).json({ message: 'Client not found' });
+    }
+    
+    res.status(200).json(updatedClient);
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating client', error: error.message });
   }
 };
