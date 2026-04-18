@@ -72,8 +72,9 @@ mongoose
   })
   .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => {
-    console.error("❌ MongoDB error:", err);
-    // ✅ DO NOT STOP SERVER
+    console.error("❌ MongoDB error upon initial connection:", err);
+    console.error("The server will now exit. Please check your DB connection and restart.");
+    process.exit(1); // ✅ CRASH FAST so it can be restarted properly
   });
 
 /* ---------- ROOT ---------- */

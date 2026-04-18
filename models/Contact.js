@@ -25,6 +25,10 @@ const contactSchema = new mongoose.Schema(
       required: true,
       maxlength: 1000,
     },
+    type: {
+      type: String,
+      default: 'enquiry',
+    },
   },
   { timestamps: true }
 );

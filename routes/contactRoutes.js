@@ -21,7 +21,7 @@ router.get("/", async (req, res) => {
 /* POST CONTACT */
 router.post("/", async (req, res) => {
   try {
-    const { name, phone, email, subject, message } = req.body;
+    const { name, phone, email, subject, message, type } = req.body;
 
     const newContact = new Contact({
       name,
@@ -29,6 +29,7 @@ router.post("/", async (req, res) => {
       email,
       subject,
       message,
+      type,
     });
 
     await newContact.save();
