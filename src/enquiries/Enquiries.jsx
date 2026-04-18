@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { FaEye, FaTrash, FaChevronDown, FaArrowLeft, FaSearch, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000";
@@ -24,6 +24,8 @@ const formatDateDisplay = (dateString) => {
    ENQUIRY DETAIL MODAL
 ------------------------------------------------------------- */
 function EnquiryDetailModal({ enquiry, onClose, onDelete, showToast }) {
+  const isQuote = enquiry.type === "quote";
+
   return (
     <div className="fixed inset-0 bg-black/30 z-[60] flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
@@ -36,7 +38,9 @@ function EnquiryDetailModal({ enquiry, onClose, onDelete, showToast }) {
             >
               <FaArrowLeft size={20} />
             </button>
-            <h2 className="text-xl font-semibold">Enquiry Details</h2>
+            <h2 className="text-xl font-semibold">
+              {isQuote ? "Quote Details" : "Enquiry Details"}
+            </h2>
           </div>
         </div>
 
@@ -88,15 +92,29 @@ export default function Enquiries({ showToast }) {
   const [enquiries, setEnquiries] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [recordsPerPage, setRecordsPerPage] = useState(50);
+  const [recordsPerPage, setRecordsPerPage] = useState(10);
   const [jumpPage, setJumpPage] = useState("");
-  const [rowsInput, setRowsInput] = useState(50);
+  const [rowsInput, setRowsInput] = useState(10);
   const [selectedEnquiry, setSelectedEnquiry] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [filterType, setFilterType] = useState("all");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const filterRef = useRef(null);
 
   /* Fetch Enquiries */
   useEffect(() => {
     fetchEnquiries();
+  }, []);
+
+  /* Click Outside Logic for Filter */
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (filterRef.current && !filterRef.current.contains(event.target)) {
+        setIsFilterOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const fetchEnquiries = async () => {
@@ -135,11 +153,17 @@ export default function Enquiries({ showToast }) {
   /* Filtering */
   const filtered = enquiries.filter(e => {
     const q = searchTerm.toLowerCase();
-    return (
+    const matchesSearch = (
       (e.name || e.yourName || "").toLowerCase().includes(q) ||
       (e.email || e.yourEmail || "").toLowerCase().includes(q) ||
       (e.subject || "").toLowerCase().includes(q)
     );
+
+    const matchesType = filterType === "all" || 
+      (filterType === "quote" && e.type === "quote") ||
+      (filterType === "enquiry" && e.type !== "quote");
+
+    return matchesSearch && matchesType;
   });
 
   const indexOfLast = currentPage * recordsPerPage;
@@ -210,6 +234,42 @@ export default function Enquiries({ showToast }) {
           <h1 className="text-2xl font-bold">Enquiry List</h1>
 
           <div className="flex items-center gap-4">
+            {/* Filter */}
+            <div className="relative" ref={filterRef}>
+              <button
+                onClick={() => setIsFilterOpen(!isFilterOpen)}
+                className={`px-4 py-2 border rounded-lg focus:outline-none bg-white transition-all shadow-sm text-sm font-medium flex items-center gap-3 min-w-[140px] justify-between ${
+                  filterType === "all" ? "text-gray-400" : "text-[#345261]"
+                }`}
+              >
+                <span>{filterType === "all" ? "All Types" : filterType === "quote" ? "Quotes" : "Enquiries"}</span>
+                <FaChevronDown size={10} className={`transition-transform duration-200 ${isFilterOpen ? 'rotate-180' : ''}`} />
+              </button>
+
+              {isFilterOpen && (
+                <div className="absolute top-full mt-2 w-full bg-white rounded-lg shadow-xl border border-gray-100 py-1 z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+                  <button
+                    onClick={() => { setFilterType("all"); setIsFilterOpen(false); setCurrentPage(1); }}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-gray-400 font-medium transition-colors"
+                  >
+                    All Types
+                  </button>
+                  <button
+                    onClick={() => { setFilterType("enquiry"); setIsFilterOpen(false); setCurrentPage(1); }}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-[#345261] font-medium transition-colors"
+                  >
+                    Enquiries
+                  </button>
+                  <button
+                    onClick={() => { setFilterType("quote"); setIsFilterOpen(false); setCurrentPage(1); }}
+                    className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50 text-[#345261] font-medium transition-colors"
+                  >
+                    Quotes
+                  </button>
+                </div>
+              )}
+            </div>
+
             {/* Search */}
             <input
               type="text"
@@ -233,6 +293,7 @@ export default function Enquiries({ showToast }) {
                 <th className="px-6 py-3 text-left">Name</th>
                 <th className="px-6 py-3 text-left">Date</th>
                 <th className="px-6 py-3 text-left">Subject</th>
+                <th className="px-6 py-3 text-left">Type</th>
                 <th className="px-6 py-3">Action</th>
               </tr>
             </thead>
@@ -253,6 +314,9 @@ export default function Enquiries({ showToast }) {
                     </td>
                     <td className="px-6 py-2 text-left max-w-xs truncate">
                       {enquiry.subject || "—"}
+                    </td>
+                    <td className="px-6 py-2 text-left text-gray-600 font-medium">
+                      {enquiry.type === "quote" ? "Quote" : "Enquiry"}
                     </td>
  
                     <td className="px-6 py-2" onClick={(e) => e.stopPropagation()}>
