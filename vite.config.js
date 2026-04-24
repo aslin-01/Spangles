@@ -7,5 +7,20 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true
+  },
+  build: {
+    chunkSizeWarningLimit: 1600,
+    rollupOptions: {
+      output: {
+        manualChunks: (id) => {
+          if (id.includes('node_modules')) {
+            if (id.includes('react')) return 'vendor_react';
+            if (id.includes('jodit')) return 'vendor_jodit';
+            if (id.includes('jspdf')) return 'vendor_jspdf';
+            return 'vendor';
+          }
+        },
+      },
+    },
   }
 })
