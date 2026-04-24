@@ -3,53 +3,32 @@ import { FaTrash, FaUpload, FaEdit, FaTimes, FaChevronLeft, FaChevronRight, FaSe
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 
 // Gallery Item Component with rounded corners and white background
-const GalleryItem = ({ item, galleryId }) => {
-  const [orientation, setOrientation] = useState('landscape');
-
-  const handleImageLoad = (e) => {
-    const img = e.target;
-    const isPortrait = img.naturalHeight > img.naturalWidth;
-    setOrientation(isPortrait ? 'portrait' : 'landscape');
-  };
-  useEffect(() => {
-    if (item.type === 'image' && item.url) {
-      const img = new Image();
-      img.onload = () => {
-        const isPortrait = img.naturalHeight > img.naturalWidth;
-        setOrientation(isPortrait ? 'portrait' : 'landscape');
-      };
-      img.src = `${API_BASE}/api/gallery/view/${item.url.split("/").pop()}`;
-    }
-  }, [item.url, item.type]);
-
+const GalleryItem = ({ item, galleryId, onPreview }) => {
   return (
-    <div className="group relative rounded-xl overflow-hidden bg-white "
-      style={{ height: "240px" }}>
+    <div 
+      className="group relative rounded-xl overflow-hidden bg-white shadow-sm hover:shadow-md transition-all duration-300 cursor-zoom-in"
+      style={{ height: "240px" }}
+      onClick={() => onPreview(item)}
+    >
 
-      <div className="w-full h-full flex items-center justify-center bg-white p-3">
+      <div className="w-full h-full flex items-center justify-center p-2">
         {item.type === "image" ? (
           <img
             src={`${API_BASE}/api/gallery/view/${item.url.split("/").pop()}`}
-            className={
-              orientation === 'portrait'
-                ? 'h-full w-auto max-h-full object-contain rounded-lg'
-                : 'w-full h-full object-cover rounded-lg'
-            }
+            className="w-full h-full object-cover rounded-lg"
             alt=""
-            onLoad={handleImageLoad}
           />
         ) : (
           <video
             src={`${API_BASE}/api/gallery/view/${item.url.split("/").pop()}`}
-            className="w-full h-full object-contain rounded-lg"
+            className="w-full h-full object-cover rounded-lg"
             controls
           />
         )}
       </div>
-
     </div>
   );
 };
@@ -57,6 +36,8 @@ const GalleryItem = ({ item, galleryId }) => {
 // Main Gallery Component
 export default function Gallery() {
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [previewItem, setPreviewItem] = useState(null);
   const [galleries, setGalleries] = useState([]);
   const [tempTitle, setTempTitle] = useState("");
   const [uploadFiles, setUploadFiles] = useState([]);
@@ -308,7 +289,7 @@ export default function Gallery() {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen flex justify-center">
+    <div className="p-6 bg-gray-50 min-h-screen flex justify-center no-scrollbar">
       <div className="w-full max-w-[1400px] mx-auto">
 
         {/* HEADER */}
@@ -361,7 +342,7 @@ export default function Gallery() {
 
                   <button
                     onClick={() => setGalleryDeleteConfirm(gallery)}
-                    className="text-[#345261] hover:text-red-600 p-2 rounded-full hover:bg-gray-100 transition"
+                    className="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition"
                     title="Delete Gallery"
                   >
                     <FaTrash size={18} />
@@ -378,12 +359,48 @@ export default function Gallery() {
                     key={`${gallery._id}-${idx}`}
                     item={item}
                     galleryId={gallery._id}
+                    onPreview={setPreviewItem}
                   />
                 ))}
               </div>
             </div>
           </div>
         ))}
+
+        {/* IMAGE PREVIEW LIGHTBOX */}
+        {previewItem && (
+          <div 
+            className="fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-4 animate-in fade-in duration-300"
+            onClick={() => setPreviewItem(null)}
+          >
+            <button 
+              className="absolute top-6 right-6 text-white/70 hover:text-white transition-colors"
+              onClick={() => setPreviewItem(null)}
+            >
+              <FaTimes size={32} />
+            </button>
+
+            <div 
+              className="max-w-[90vw] max-h-[90vh] relative"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {previewItem.type === "image" ? (
+                <img
+                  src={`${API_BASE}/api/gallery/view/${previewItem.url.split("/").pop()}`}
+                  className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-2xl"
+                  alt=""
+                />
+              ) : (
+                <video
+                  src={`${API_BASE}/api/gallery/view/${previewItem.url.split("/").pop()}`}
+                  className="max-w-full max-h-[90vh] rounded-lg shadow-2xl"
+                  controls
+                  autoPlay
+                />
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Pagination Section */}
         {galleries.length >= 10 && (
@@ -419,10 +436,10 @@ export default function Gallery() {
                     onClick={() => typeof num === "number" && setCurrentPage(num)}
                     disabled={num === "..."}
                     className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-semibold transition-all ${currentPage === num
-                        ? "bg-[#345261] text-white shadow-md transform scale-105"
-                        : num === "..."
-                          ? "cursor-default text-gray-400"
-                          : "hover:bg-gray-50 text-gray-600 active:bg-gray-100"
+                      ? "bg-[#345261] text-white shadow-md transform scale-105"
+                      : num === "..."
+                        ? "cursor-default text-gray-400"
+                        : "hover:bg-gray-50 text-gray-600 active:bg-gray-100"
                       }`}
                   >
                     {num}
@@ -522,7 +539,7 @@ export default function Gallery() {
                   </button>
                 </div>
 
-                <div className="p-6 overflow-y-auto flex-1">
+                <div className="p-6 overflow-y-auto flex-1 no-scrollbar">
                   {/* Title and Category Inputs */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                     <div>
@@ -530,7 +547,7 @@ export default function Gallery() {
                         Title
                       </label>
                       <input
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#345261]"
                         value={tempTitle}
                         onChange={(e) => setTempTitle(e.target.value)}
                         placeholder="Enter gallery title"
@@ -550,21 +567,54 @@ export default function Gallery() {
                         </button>
                       </div>
                       <div className="relative h-[50px]">
-                        <select
-                          className="w-full h-full px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white appearance-none cursor-pointer pr-10 text-gray-700 font-medium"
-                          value={category}
-                          onChange={(e) => setCategory(e.target.value)}
+                        {/* Custom Dropdown Trigger */}
+                        <div
+                          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                          className={`w-full h-full px-4 border rounded-xl bg-white flex items-center justify-between cursor-pointer transition-all shadow-sm ${isDropdownOpen ? 'border-[#345261] ring-1 ring-[#345261]/10' : 'border-gray-200 hover:border-[#345261]/30'}`}
                         >
-                          <option value="">Select Category</option>
-                          {categories.map((cat, idx) => (
-                            <option key={idx} value={cat}>
-                              {cat} {window.__categoryCounts?.[cat] ? `(${window.__categoryCounts[cat]})` : ""}
-                            </option>
-                          ))}
-                        </select>
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-                          <FaChevronDown size={14} />
+                          <span className={`font-semibold text-sm ${category ? 'text-gray-700' : 'text-gray-400'}`}>
+                            {category ? `${category} ${window.__categoryCounts?.[category] ? `(${window.__categoryCounts[category]})` : ""}` : 'Select Category'}
+                          </span>
+                          <FaChevronDown size={12} className={`text-gray-400 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180 text-[#345261]' : ''}`} />
                         </div>
+
+                        {/* Custom Dropdown Options */}
+                        {isDropdownOpen && (
+                          <>
+                            <div
+                              className="fixed inset-0 z-10"
+                              onClick={() => setIsDropdownOpen(false)}
+                            />
+                            <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-2 max-h-60 overflow-y-auto no-scrollbar animate-in fade-in slide-in-from-top-2 duration-200">
+                              <div
+                                onClick={() => {
+                                  setCategory("");
+                                  setIsDropdownOpen(false);
+                                }}
+                                className="px-4 py-2.5 text-xs text-gray-400 hover:bg-gray-50 cursor-pointer transition-colors uppercase tracking-wider font-bold"
+                              >
+                                Clear Selection
+                              </div>
+                              {categories.map((cat, idx) => (
+                                <div
+                                  key={idx}
+                                  onClick={() => {
+                                    setCategory(cat);
+                                    setIsDropdownOpen(false);
+                                  }}
+                                  className={`px-4 py-2.5 text-sm font-medium cursor-pointer transition-colors flex justify-between items-center ${category === cat ? 'bg-[#345261] text-white' : 'text-gray-600 hover:bg-[#345261]/5 hover:text-[#345261]'}`}
+                                >
+                                  <span>{cat}</span>
+                                  {window.__categoryCounts?.[cat] && (
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${category === cat ? 'bg-white/20' : 'bg-gray-100 text-gray-400'}`}>
+                                      {window.__categoryCounts[cat]}
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -664,8 +714,8 @@ export default function Gallery() {
                             </div>
                           ))}
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">
-                          Click the ✕ icon to remove items from the gallery
+                        <p className="text-xs text-gray-500 mt-2 italic font-medium">
+                          Click the trash icon to remove items from this gallery
                         </p>
                       </div>
                     )}
@@ -744,8 +794,8 @@ export default function Gallery() {
                     onClick={handleUploadSubmit}
                     disabled={uploadFiles.length === 0 && !editGallery}
                     className={`px-6 py-3 rounded-lg font-medium ${uploadFiles.length > 0 || editGallery
-                        ? "text-white"
-                        : "bg-gray-200 text-gray-400 cursor-not-allowed"
+                      ? "text-white"
+                      : "bg-gray-200 text-gray-400 cursor-not-allowed"
                       }`}
                     style={
                       uploadFiles.length > 0 || editGallery
@@ -785,7 +835,7 @@ export default function Gallery() {
                     Category Name
                   </label>
                   <input
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none transition-colors focus:border-[#345261]"
                     value={newCategory}
                     onChange={(e) => setNewCategory(e.target.value)}
                     placeholder="e.g. Wedding, Nature, Event"
@@ -798,7 +848,7 @@ export default function Gallery() {
                   <label className="block text-[10px] uppercase tracking-[1.5px] text-gray-500 font-bold mb-3">
                     Available Categories
                   </label>
-                  <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-2 scrollbar-thin">
+                  <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto pr-2 no-scrollbar">
                     {categories.length > 0 ? (
                       categories.map((cat, idx) => (
                         <div
@@ -811,7 +861,7 @@ export default function Gallery() {
                             onClick={() => {
                               // Check if category is in use
                               const isInUse = galleries.some(g => g.category === cat);
-                              
+
                               if (isInUse) {
                                 toast.error(`Cannot delete "${cat}" because it contains galleries. Please delete or reassign the galleries first.`);
                               } else {
@@ -940,7 +990,7 @@ export default function Gallery() {
               onClick={() => setGeneralConfirm(null)}
             />
             <div className="fixed inset-0 flex justify-center items-center z-[110] p-4 pointer-events-none">
-              <div 
+              <div
                 className="bg-white rounded-2xl p-8 w-full max-w-sm shadow-2xl animate-in fade-in zoom-in duration-200 pointer-events-auto"
                 onClick={e => e.stopPropagation()}
               >

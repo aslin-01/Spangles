@@ -1,3 +1,5 @@
+
+
 import { useState, useEffect, useRef } from "react";
 import {
   FaSearch,
@@ -43,7 +45,7 @@ const toolbarCSS = `
 const formatDate = (d) =>
   new Date(d).toLocaleDateString("en-GB", {
     day: "2-digit",
-    month: "short",
+    month: "long",
     year: "numeric",
   });
 
@@ -361,15 +363,27 @@ export default function Blogs() {
             {currentBlogs.map((blog) => (
               <div
                 key={blog._id}
-                className="w-[344px] bg-white rounded-2xl border shadow-sm overflow-hidden flex"
+                className="w-[344px] bg-white rounded-[10px] border border-[#345261] shadow-sm overflow-hidden flex group hover:shadow-md transition-all duration-300"
                 style={{ height: "160px" }}
               >
-                <div className="w-[140px] h-full">
+                <div
+                  className="w-[140px] h-full overflow-hidden cursor-pointer relative"
+                  onClick={() => {
+                    setSelectedBlog(blog);
+                    setPage("view");
+                  }}
+                >
                   <img
                     src={`${API_BASE}/api/blogs/view/${blog.image.split("/").pop()}`}
-                    className="w-full h-full object-cover rounded-l-2xl"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     alt="blog"
                   />
+                  {/* View Detail Overlay */}
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                    <div className="bg-white/95 px-3 py-1.5 rounded-md flex items-center gap-1.5 text-[#345261] text-[10px] font-bold shadow-sm backdrop-blur-[2px]">
+                      <FaRegClock size={10} /> View
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex-1 flex flex-col">
@@ -388,20 +402,29 @@ export default function Blogs() {
                       )}
                     </div>
 
-                    <p className="font-semibold text-sm leading-tight mb-1 pt-2 line-clamp-2">
+                    <p
+                      className="font-semibold text-sm leading-tight mb-1 line-clamp-1 group-hover:text-[#345261] transition-colors cursor-pointer"
+                      onClick={() => {
+                        setSelectedBlog(blog);
+                        setPage("view");
+                      }}
+                    >
                       {blog.title}
+                    </p>
+                    <p className="text-gray-500 text-[11px] leading-snug line-clamp-3">
+                      {blog.content.replace(/<[^>]*>/g, ' ').trim()}
                     </p>
                   </div>
 
-                  <div className="h-6 flex border-t">
+                  <div className="h-8 flex border-t opacity-0 group-hover:opacity-100 transition-all duration-300 bg-gray-50/50">
                     <button
                       onClick={() => deleteBlog(blog._id)}
-                      className="flex items-center justify-center text-red-500 hover:bg-red-50 text-sm font-medium w-1/2"
+                      className="flex items-center justify-center text-red-400 hover:bg-red-50 text-[10px] font-medium w-1/2 gap-1"
                     >
-                      <FaTrash /> Delete
+                      <FaTrash size={10} /> Delete
                     </button>
 
-                    <div className="w-px bg-gray-300 h-full"></div>
+                    <div className="w-px bg-gray-200 h-full"></div>
 
                     <button
                       onClick={() => {
@@ -414,9 +437,9 @@ export default function Blogs() {
                         setImageFile(null);
                         setPage("add");
                       }}
-                      className="flex items-center justify-center text-[#345261] text-sm font-medium w-1/2"
+                      className="flex items-center justify-center text-[#345261] hover:bg-gray-100 text-[10px] font-medium w-1/2 gap-1"
                     >
-                      <FaEdit /> Edit
+                      <FaEdit size={10} /> Edit
                     </button>
                   </div>
                 </div>
@@ -457,13 +480,12 @@ export default function Blogs() {
                       key={i}
                       onClick={() => typeof num === "number" && setCurrentPage(num)}
                       disabled={num === "..."}
-                      className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-semibold transition-all ${
-                        currentPage === num
-                          ? "bg-[#345261] text-white shadow-md transform scale-105"
-                          : num === "..."
+                      className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-semibold transition-all ${currentPage === num
+                        ? "bg-[#345261] text-white shadow-md transform scale-105"
+                        : num === "..."
                           ? "cursor-default text-gray-400"
                           : "hover:bg-gray-50 text-gray-600 active:bg-gray-100"
-                      }`}
+                        }`}
                     >
                       {num}
                     </button>
@@ -588,7 +610,7 @@ export default function Blogs() {
                   </span>
                 ))}
               </div>
-              
+
               {/* Tag pool to select from */}
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {availableTags.filter(t => !tags.includes(t)).slice(0, 10).map((t, i) => (
@@ -606,32 +628,32 @@ export default function Blogs() {
 
           <label className="block font-medium mb-1">Content</label>
           <div className="border border-gray-300 rounded-lg mb-4 overflow-hidden">
-            
+
             <JoditEditor
-  ref={editor}
-  value={content}
-  onBlur={(newContent) => setContent(newContent)}
-  config={{
-    height: 400,
-    toolbarAdaptive: false,
-    toolbarSticky: false,
-    statusbar: false,
+              ref={editor}
+              value={content}
+              onBlur={(newContent) => setContent(newContent)}
+              config={{
+                height: 400,
+                toolbarAdaptive: false,
+                toolbarSticky: false,
+                statusbar: false,
 
-    // 🚫 Disable "Paste as HTML" popup
-    askBeforePasteHTML: false,
-    askBeforePasteFromWord: false,
-    pasteHTMLAction: "insert",
-    defaultActionOnPaste: "insert_clear_html",
+                // 🚫 Disable "Paste as HTML" popup
+                askBeforePasteHTML: false,
+                askBeforePasteFromWord: false,
+                pasteHTMLAction: "insert",
+                defaultActionOnPaste: "insert_clear_html",
 
-    buttons: [
-      "bold", "italic", "underline", "strikethrough",
-      "ul", "ol",
-      "outdent", "indent",
-      "left", "center", "right", "justify",
-      "font", "fontsize", "brush"
-    ],
-  }}
-/>
+                buttons: [
+                  "bold", "italic", "underline", "strikethrough",
+                  "ul", "ol",
+                  "outdent", "indent",
+                  "left", "center", "right", "justify",
+                  "font", "fontsize", "brush"
+                ],
+              }}
+            />
 
           </div>
 
@@ -696,56 +718,64 @@ export default function Blogs() {
 
       {/* VIEW BLOG PAGE */}
       {page === "view" && selectedBlog && (
-        <div className="w-full flex justify-center py-10 px-4">
-          <div className="w-full max-w-[1020px] bg-white border rounded-lg p-6 shadow-sm">
-            <button
-              onClick={() => setPage("list")}
-              className="flex items-center gap-2 text-[#23414a] mb-6"
-            >
-              <FaArrowLeft /> Back
-            </button>
+        <div className="w-full bg-white rounded-[10px] min-h-screen px-6 py-10">
+          {/* Back Button */}
+          <button
+            onClick={() => setPage("list")}
+            className="p-2 -ml-2 mb-8 text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-full transition-all"
+          >
+            <FaArrowLeft size={20} />
+          </button>
 
-            <h1 className="text-2xl font-semibold mb-4">{selectedBlog.title}</h1>
-
-            <div className="flex items-center gap-4 text-gray-500 text-sm mb-6">
-              <div className="flex items-center gap-2">
-                <FaCalendarAlt className="text-[#23414a]" />
-                {formatDate(selectedBlog.createdAt)} •{" "}
-                {new Date(selectedBlog.createdAt).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                })}
-              </div>
-              
-              {selectedBlog.category && (
-                <span className="px-3 py-1 bg-[#345261] text-white text-xs font-bold rounded uppercase tracking-wider">
-                  {selectedBlog.category}
-                </span>
-              )}
-            </div>
+          {/* Title & Tags */}
+          <div className="flex flex-wrap items-center gap-4 mb-4">
+            <h1 className="text-[32px] md:text-[40px] font-bold text-[#1a2b33] leading-tight tracking-tight">
+              {selectedBlog.title}
+            </h1>
 
             {selectedBlog.tags && selectedBlog.tags.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-6">
+              <div className="flex flex-wrap gap-2 items-center mt-3">
                 {selectedBlog.tags.map((tag, idx) => (
-                  <span key={idx} className="px-2 py-1 bg-gray-100 text-gray-600 text-[11px] font-medium rounded border border-gray-200">
+                  <span key={idx} className="px-3 py-1 bg-[#345261]/10 text-[#345261] text-[10px] font-bold rounded uppercase tracking-wider">
                     #{tag}
                   </span>
                 ))}
               </div>
             )}
+          </div>
 
+          {/* Meta Info */}
+          <div className="flex items-center gap-2 text-gray-500 mb-10">
+            <FaRegClock className="text-gray-400" size={16} />
+            <span className="text-sm font-medium">
+              {formatDate(selectedBlog.createdAt)} |{" "}
+              {new Date(selectedBlog.createdAt).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          </div>
+
+          {/* Featured Image */}
+          <div className="w-full mb-12 rounded-2xl overflow-hidden shadow-sm border border-gray-100">
             <img
               src={`${API_BASE}/api/blogs/view/${selectedBlog.image.split("/").pop()}`}
-              className="w-full h-[351px] object-cover rounded mb-6"
-              alt=""
-            />
-
-            <div
-              className="content-view text-justify"
-              dangerouslySetInnerHTML={{ __html: selectedBlog.content }}
-              style={{ lineHeight: "1.6", fontSize: "16px" }}
+              className="w-full h-[400px] object-cover"
+              alt={selectedBlog.title}
             />
           </div>
+
+          {/* Content Area */}
+          <div
+            className="content-view prose prose-lg max-w-none text-gray-700"
+            dangerouslySetInnerHTML={{ __html: selectedBlog.content }}
+            style={{
+              lineHeight: "1.8",
+              fontSize: "17px",
+              color: "#4a5568"
+            }}
+          />
+
         </div>
       )}
 
@@ -756,7 +786,7 @@ export default function Blogs() {
           <div className="bg-white rounded-xl w-full max-w-md shadow-2xl p-6 relative z-10">
             <h3 className="text-lg font-bold text-gray-800 mb-2">Add New Category</h3>
             <p className="text-xs text-gray-500 mb-4">Enter a new category name or select from existing ones below.</p>
-            
+
             <div className="mb-6">
               <input
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#345261] outline-none mb-4"
@@ -810,17 +840,17 @@ export default function Blogs() {
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <button 
+              <button
                 onClick={() => {
                   setShowCategoryModal(false);
                   setNewCategory("");
-                }} 
+                }}
                 className="px-4 py-2 text-gray-500 font-medium"
               >
                 Cancel
               </button>
-              <button 
-                onClick={handleAddNewCategory} 
+              <button
+                onClick={handleAddNewCategory}
                 className="px-6 py-2 bg-[#345261] text-white rounded-lg font-medium shadow-md hover:bg-[#2a4250] transition-colors"
                 disabled={!newCategory.trim()}
               >
@@ -838,7 +868,7 @@ export default function Blogs() {
           <div className="bg-white rounded-xl w-full max-w-md shadow-2xl p-6 relative z-10">
             <h3 className="text-lg font-bold text-gray-800 mb-2">Add New Tag</h3>
             <p className="text-xs text-gray-500 mb-4">Enter a new tag name or manage existing tags below.</p>
-            
+
             <div className="mb-6">
               <input
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#345261] outline-none mb-4"
@@ -892,17 +922,17 @@ export default function Blogs() {
             </div>
 
             <div className="flex justify-end gap-3 pt-4 border-t">
-              <button 
+              <button
                 onClick={() => {
                   setShowTagModal(false);
                   setNewTag("");
-                }} 
+                }}
                 className="px-4 py-2 text-gray-500 font-medium"
               >
                 Cancel
               </button>
-              <button 
-                onClick={handleAddNewTag} 
+              <button
+                onClick={handleAddNewTag}
                 className="px-6 py-2 bg-[#345261] text-white rounded-lg font-medium shadow-md hover:bg-[#2a4250] transition-colors"
                 disabled={!newTag.trim()}
               >
@@ -950,3 +980,5 @@ export default function Blogs() {
     </div>
   );
 }
+
+

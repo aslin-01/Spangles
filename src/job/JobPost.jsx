@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { FaEdit, FaTrash, FaPlus, FaEye, FaArrowLeft, FaChevronLeft, FaChevronRight, FaSearch } from "react-icons/fa";
 
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 const ACTIVE_COLOR = "#1b6e39";
 
 export function JobFormPage({ job, onSave, onCancel }) {
@@ -244,7 +244,7 @@ export function JobFormPage({ job, onSave, onCancel }) {
                     value={formData.jobSummary}
                     onChange={(e) => handleInput("jobSummary", e.target.value)}
                     onInput={autoResize}
-                   
+
                     className="auto-textarea no-scrollbar w-full border border-gray-300 rounded-lg px-4 py-3 resize-none overflow-hidden focus:ring-2 focus:ring-[#345261]"
 
                     placeholder="Enter job summary"
@@ -305,80 +305,77 @@ export function JobFormPage({ job, onSave, onCancel }) {
 
             {/* STATUS */}
 
-<div className="pb-6">
-  <div className="flex items-center gap-10">
-    <span className="text-sm font-medium text-gray-700 w-16">Status</span>
-    
-    <label className="flex items-center gap-2 cursor-pointer">
-      <input
-        type="radio"
-        name="status"
-        value="Active"
-        checked={formData.status === "Active"}
-        onChange={(e) => handleInput("status", e.target.value)}
-        className="sr-only"
-      />
-      <div
-        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-          formData.status === "Active"
-            ? "border-green-600"
-            : "border-green-400"
-        }`}
-      >
-        {formData.status === "Active" && (
-          <div className="w-2.5 h-2.5 rounded-full bg-green-600"></div>
-        )}
-      </div>
-      <span className="text-green-600 font-medium">Active</span>
-    </label>
+            <div className="pb-6">
+              <div className="flex items-center gap-10">
+                <span className="text-sm font-medium text-gray-700 w-16">Status</span>
 
-    <label className="flex items-center gap-2 cursor-pointer">
-      <input
-        type="radio"
-        name="status"
-        value="Inactive"
-        checked={formData.status === "Inactive"}
-        onChange={(e) => handleInput("status", e.target.value)}
-        className="sr-only"
-      />
-      <div
-        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-          formData.status === "Inactive"
-            ? "border-red-500"
-            : "border-red-300"
-        }`}
-      >
-        {formData.status === "Inactive" && (
-          <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
-        )}
-      </div>
-      <span className="text-red-500 font-medium">In Active</span>
-    </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="status"
+                    value="Active"
+                    checked={formData.status === "Active"}
+                    onChange={(e) => handleInput("status", e.target.value)}
+                    className="sr-only"
+                  />
+                  <div
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.status === "Active"
+                      ? "border-green-600"
+                      : "border-green-400"
+                      }`}
+                  >
+                    {formData.status === "Active" && (
+                      <div className="w-2.5 h-2.5 rounded-full bg-green-600"></div>
+                    )}
+                  </div>
+                  <span className="text-green-600 font-medium">Active</span>
+                </label>
 
-    <label className="flex items-center gap-2 cursor-pointer">
-      <input
-        type="radio"
-        name="status"
-        value="On Hold"
-        checked={formData.status === "On Hold"}
-        onChange={(e) => handleInput("status", e.target.value)}
-        className="sr-only"
-      />
-      <div
-        className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-          formData.status === "On Hold"
-            ? "border-orange-500"
-            : "border-orange-300"
-        }`}
-      >
-        {formData.status === "On Hold" && (
-          <div className="w-2.5 h-2.5 rounded-full bg-orange-500"></div>
-        )}
-      </div>
-      <span className="text-orange-500 font-medium">On Hold</span>
-    </label>
-  </div>
-</div>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="status"
+                    value="Inactive"
+                    checked={formData.status === "Inactive"}
+                    onChange={(e) => handleInput("status", e.target.value)}
+                    className="sr-only"
+                  />
+                  <div
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.status === "Inactive"
+                      ? "border-red-500"
+                      : "border-red-300"
+                      }`}
+                  >
+                    {formData.status === "Inactive" && (
+                      <div className="w-2.5 h-2.5 rounded-full bg-red-500"></div>
+                    )}
+                  </div>
+                  <span className="text-red-500 font-medium">In Active</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="status"
+                    value="On Hold"
+                    checked={formData.status === "On Hold"}
+                    onChange={(e) => handleInput("status", e.target.value)}
+                    className="sr-only"
+                  />
+                  <div
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${formData.status === "On Hold"
+                      ? "border-orange-500"
+                      : "border-orange-300"
+                      }`}
+                  >
+                    {formData.status === "On Hold" && (
+                      <div className="w-2.5 h-2.5 rounded-full bg-orange-500"></div>
+                    )}
+                  </div>
+                  <span className="text-orange-500 font-medium">On Hold</span>
+                </label>
+              </div>
+            </div>
 
 
             {/* BUTTONS */}
@@ -410,8 +407,8 @@ export function PreviewPage({ job, onEdit, onClose }) {
     !v
       ? []
       : Array.isArray(v)
-      ? v
-      : v.split("\n").map((x) => x.trim()).filter(Boolean);
+        ? v
+        : v.split("\n").map((x) => x.trim()).filter(Boolean);
   const preferred = toList(job.preferredSkills);
   const qual = toList(job.requiredQualifications);
   const resp = toList(job.responsibilities);
@@ -817,7 +814,7 @@ export default function JobPost() {
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Job Postings</h1>
-           
+
           </div>
           <div className="flex items-center gap-4">
             <div className="relative">
@@ -996,13 +993,12 @@ export default function JobPost() {
                       key={i}
                       onClick={() => typeof num === "number" && setCurrentPage(num)}
                       disabled={num === "..."}
-                      className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-semibold transition-all ${
-                        currentPage === num
-                          ? "bg-[#345261] text-white shadow-md transform scale-105"
-                          : num === "..."
+                      className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-semibold transition-all ${currentPage === num
+                        ? "bg-[#345261] text-white shadow-md transform scale-105"
+                        : num === "..."
                           ? "cursor-default text-gray-400"
                           : "hover:bg-gray-50 text-gray-600 active:bg-gray-100"
-                      }`}
+                        }`}
                     >
                       {num}
                     </button>
@@ -1036,7 +1032,7 @@ export default function JobPost() {
             </div>
           )}
         </div>
-     </div>
+      </div>
     </div>
   );
 }

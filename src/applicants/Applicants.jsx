@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { FaDownload, FaChevronDown, FaArrowLeft, FaSearch, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 
 /* -------------------------------------------------------------
    DATE FORMAT

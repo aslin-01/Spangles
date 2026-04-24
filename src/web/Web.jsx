@@ -4,7 +4,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { FaRegClock } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 
 /* --------------------------------------------------
    JOB MODAL

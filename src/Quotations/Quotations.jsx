@@ -3,7 +3,7 @@ import { FaEye, FaEdit, FaTrash, FaDownload, FaPrint, FaPlus, FaSearch, FaChevro
 import autoTable from "jspdf-autotable";
 import jsPDF from "jspdf";
 
-const API_BASE = process.env.REACT_APP_API_BASE || "http://localhost:5000";
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 
 /* ------------------ Utilities ------------------ */
 const currency = (value) => {
