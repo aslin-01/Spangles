@@ -783,7 +783,11 @@ export default function JobPost() {
   // Main list view
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      <style>{`@keyframes toast-progress { from { transform: scaleX(1);} to { transform: scaleX(0);} }`}</style>
+      <style>{`
+        @keyframes toast-progress { from { transform: scaleX(1);} to { transform: scaleX(0);} }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
 
       {/* Toast Notifications */}
       <div className="fixed top-4 right-4 z-50 w-[340px]">
@@ -852,7 +856,7 @@ export default function JobPost() {
 
         {/* Jobs Table */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto no-scrollbar">
             <table className="min-w-full">
               <thead>
                 <tr
@@ -945,8 +949,8 @@ export default function JobPost() {
                           </button>
                           <button
                             onClick={() => handleDelete(job)}
-                            className="p-2 rounded hover:bg-gray-100 transition-colors"
-                            style={{ color: "#345261" }}
+                            className="p-2 rounded hover:bg-red-50 transition-colors"
+                            style={{ color: "#dc2626" }}
                             title="Delete"
                           >
                             <FaTrash size={16} />

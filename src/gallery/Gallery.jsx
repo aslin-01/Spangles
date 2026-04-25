@@ -324,7 +324,7 @@ export default function Gallery() {
                     <h2 className="text-lg font-semibold">{gallery.title}</h2>
                   )}
                   {gallery.category && (
-                    <span className="px-3 py-1 bg-[#f3c98f]/20 text-[#7a6550] text-xs font-semibold rounded-full border border-[#f3c98f]/30">
+                    <span className="px-3 py-1 bg-[#345261]/10 text-[#345261] text-[11px] font-bold rounded-full border border-[#345261]/20 uppercase tracking-wide">
                       {gallery.category}
                     </span>
                   )}

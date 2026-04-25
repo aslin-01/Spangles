@@ -332,15 +332,18 @@ export default function Blogs() {
       {/* LIST PAGE */}
       {page === "list" && (
         <>
-          <div className="flex justify-between items-center bg-white p-4 rounded-lg border mb-6">
-            <h2 className="text-lg font-semibold">Blogs</h2>
+          <div className="flex justify-between items-center bg-white p-5 rounded-xl border border-gray-100 shadow-sm mb-8">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-800 tracking-tight">Blog Management</h2>
+              <p className="text-gray-500 text-sm mt-1">Create, edit and manage your blog articles</p>
+            </div>
 
             <div className="flex items-center gap-4">
-              <div className="relative">
-                <FaSearch className="absolute left-3 top-2 text-gray-400" />
+              <div className="relative group">
+                <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#345261] transition-colors" />
                 <input
-                  className="pl-10 pr-4 py-2 border rounded w-64 text-sm"
-                  placeholder="Search..."
+                  className="pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl w-72 text-sm focus:ring-2 focus:ring-[#345261]/20 focus:border-[#345261] outline-none transition-all bg-gray-50/50 focus:bg-white"
+                  placeholder="Search articles..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                 />
@@ -351,95 +354,97 @@ export default function Blogs() {
                   resetEditor();
                   setPage("add");
                 }}
-                className="flex items-center gap-2 bg-[#23414a] text-white px-4 py-2 rounded"
+                className="flex items-center gap-2 bg-[#23414a] hover:bg-[#1a3037] text-white px-6 py-2.5 rounded-xl font-semibold shadow-lg shadow-[#23414a]/20 transition-all hover:-translate-y-0.5 active:translate-y-0"
               >
-                <FaPlus /> New Blogs
+                <FaPlus size={14} /> New Article
               </button>
             </div>
           </div>
 
-          {/* BLOG GRID */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* BLOG GRID - CINEMATIC VERSION */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {currentBlogs.map((blog) => (
               <div
                 key={blog._id}
-                className="w-[344px] bg-white rounded-[10px] border border-[#345261] shadow-sm overflow-hidden flex group hover:shadow-md transition-all duration-300"
-                style={{ height: "160px" }}
+                className="group relative h-[380px] rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-700 cursor-default"
               >
-                <div
-                  className="w-[140px] h-full overflow-hidden cursor-pointer relative"
-                  onClick={() => {
-                    setSelectedBlog(blog);
-                    setPage("view");
-                  }}
-                >
-                  <img
-                    src={`${API_BASE}/api/blogs/view/${blog.image.split("/").pop()}`}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-                    alt="blog"
-                  />
-                  {/* View Detail Overlay */}
-                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-                    <div className="bg-white/95 px-3 py-1.5 rounded-md flex items-center gap-1.5 text-[#345261] text-[10px] font-bold shadow-sm backdrop-blur-[2px]">
-                      <FaRegClock size={10} /> View
-                    </div>
-                  </div>
+                {/* Full-Bleed Image Background */}
+                <img
+                  src={`${API_BASE}/api/blogs/view/${blog.image.split("/").pop()}`}
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-[1.5s] ease-out"
+                  alt="blog"
+                />
+
+                {/* Rich Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent opacity-80 group-hover:opacity-90 transition-opacity duration-500" />
+
+                {/* Floating Actions (Top Right) */}
+                <div className="absolute top-4 right-4 flex gap-2 translate-y-[-10px] opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500">
+                  <button
+                    onClick={() => {
+                      setIsEditing(true);
+                      setTitle(blog.title);
+                      setContent(blog.content);
+                      setCategory(blog.category || "");
+                      setTags(blog.tags || []);
+                      setImagePreview(`${API_BASE}/api/blogs/view/${blog.image.split("/").pop()}`);
+                      setImageFile(null);
+                      setPage("add");
+                    }}
+                    className="p-2.5 bg-white/20 backdrop-blur-md hover:bg-white/40 text-white rounded-xl border border-white/20 transition-all"
+                    title="Edit"
+                  >
+                    <FaEdit size={14} />
+                  </button>
+                  <button
+                    onClick={() => deleteBlog(blog._id)}
+                    className="p-2.5 bg-red-500/20 backdrop-blur-md hover:bg-red-500/40 text-red-100 rounded-xl border border-white/10 transition-all"
+                    title="Delete"
+                  >
+                    <FaTrash size={14} />
+                  </button>
                 </div>
 
-                <div className="flex-1 flex flex-col">
-                  <div className="px-4 py-3 flex-1">
-                    <div className="flex items-center justify-between gap-1 mb-1">
-                      <div className="flex items-center gap-1 text-gray-400">
-                        <FaRegClock size={10} />
-                        <span className="text-[10px] font-medium">
-                          {formatDate(blog.createdAt)}
-                        </span>
-                      </div>
-                      {blog.category && (
-                        <span className="px-2 py-0.5 bg-[#345261]/10 text-[#345261] text-[10px] font-bold rounded uppercase tracking-wider">
-                          {blog.category}
-                        </span>
-                      )}
-                    </div>
+                {/* Category Badge (Top Left) */}
+                {blog.category && (
+                  <div className="absolute top-4 left-4">
+                    <span className="px-3 py-1 bg-[#345261]/80 backdrop-blur-md text-white text-[10px] font-bold rounded-lg uppercase tracking-wider border border-white/10">
+                      {blog.category}
+                    </span>
+                  </div>
+                )}
 
-                    <p
-                      className="font-semibold text-sm leading-tight mb-1 line-clamp-1 group-hover:text-[#345261] transition-colors cursor-pointer"
+                {/* Content Overlay (Bottom) */}
+                <div className="absolute bottom-0 left-0 right-0 px-8 pb-5 pt-8 flex flex-col justify-end transform transition-transform duration-500 group-hover:translate-y-[-10px]">
+                  <div className="flex items-center gap-2 text-white/60 mb-3 text-[11px] font-semibold tracking-wide">
+                    <FaCalendarAlt size={12} className="text-white/40" />
+                    {formatDate(blog.createdAt)}
+                  </div>
+
+                  <h3
+                    className="text-2xl font-bold text-white leading-tight mb-2 cursor-pointer hover:text-white/80 transition-all"
+                    onClick={() => {
+                      setSelectedBlog(blog);
+                      setPage("view");
+                    }}
+                  >
+                    {blog.title}
+                  </h3>
+
+                  {/* Expandable Content on Hover */}
+                  <div className="max-h-0 opacity-0 group-hover:max-h-40 group-hover:opacity-100 overflow-hidden transition-all duration-500 ease-in-out">
+                    <p className="text-white/70 text-sm leading-relaxed line-clamp-3 mb-4 mt-2">
+                      {blog.content.replace(/<[^>]*>/g, ' ').trim()}
+                    </p>
+
+                    <button
                       onClick={() => {
                         setSelectedBlog(blog);
                         setPage("view");
                       }}
+                      className="w-fit flex items-center gap-2 px-5 py-2 bg-white text-[#345261] rounded-full text-xs font-bold shadow-xl hover:bg-gray-100 transition-all mb-2"
                     >
-                      {blog.title}
-                    </p>
-                    <p className="text-gray-500 text-[11px] leading-snug line-clamp-3">
-                      {blog.content.replace(/<[^>]*>/g, ' ').trim()}
-                    </p>
-                  </div>
-
-                  <div className="h-8 flex border-t opacity-0 group-hover:opacity-100 transition-all duration-300 bg-gray-50/50">
-                    <button
-                      onClick={() => deleteBlog(blog._id)}
-                      className="flex items-center justify-center text-red-400 hover:bg-red-50 text-[10px] font-medium w-1/2 gap-1"
-                    >
-                      <FaTrash size={10} /> Delete
-                    </button>
-
-                    <div className="w-px bg-gray-200 h-full"></div>
-
-                    <button
-                      onClick={() => {
-                        setIsEditing(true);
-                        setTitle(blog.title);
-                        setContent(blog.content);
-                        setCategory(blog.category || "");
-                        setTags(blog.tags || []);
-                        setImagePreview(`${API_BASE}/api/blogs/view/${blog.image.split("/").pop()}`);
-                        setImageFile(null);
-                        setPage("add");
-                      }}
-                      className="flex items-center justify-center text-[#345261] hover:bg-gray-100 text-[10px] font-medium w-1/2 gap-1"
-                    >
-                      <FaEdit size={10} /> Edit
+                      Read Article <FaChevronRight size={10} />
                     </button>
                   </div>
                 </div>

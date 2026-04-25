@@ -956,7 +956,7 @@ const Quotations = ({ showToast }) => {
                                             <button onClick={() => { setQuotationForm({ ...r }); setShowQuotationForm(true); }}><FaEdit /></button>
                                         )}
                                         {user?.role === "admin" && (
-                                            <button onClick={() => deleteRecord(r._id)}><FaTrash /></button>
+                                            <button onClick={() => deleteRecord(r._id)} className="text-red-500 hover:text-red-700 transition-colors"><FaTrash /></button>
                                         )}
                                     </td>
                                 </tr>

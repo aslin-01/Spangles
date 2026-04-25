@@ -1,14 +1,15 @@
 import React, { useEffect, useRef, useState } from "react";
 import { FaEye, FaEdit, FaTrash, FaDownload, FaPrint, FaPlus, FaSearch, FaChevronLeft, FaChevronRight, FaArrowLeft } from "react-icons/fa";
-import autoTable from "jspdf-autotable";
 import jsPDF from "jspdf";
+import ReactDOM from "react-dom/client";
+import InvoiceTemplate from "./components/InvoiceTemplate";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 
 /* ------------------ Utilities ------------------ */
 const currency = (value) => {
   const num = Number(value || 0);
-  return "₹" + num.toLocaleString("en-IN", {
+  return "Rs. " + num.toLocaleString("en-IN", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
@@ -627,262 +628,68 @@ const Invoice = ({ showToast }) => {
     }
   };
 
-  const generatePDF_withAutoTable = async (record, filename) => {
+  const generatePDF = async (record) => {
     try {
-      const doc = new jsPDF({ unit: "pt", format: "a4" });
-      const margin = 40;
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const usableWidth = pageWidth - margin * 2;
+      showToast("Generating Premium PDF...");
+      
+      const container = document.createElement("div");
+      container.style.position = "absolute";
+      container.style.left = "-9999px";
+      container.style.width = "800px"; // Match template width
+      document.body.appendChild(container);
 
-      const safeNum = (v) => (isNaN(Number(v)) ? 0 : Number(v));
-      const hexToRgb = (hex) => {
-        const n = parseInt(hex.replace("#", ""), 16);
-        return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
-      };
-      const titleRGB = hexToRgb("#23414a");
-      const headerColor = [37, 68, 82];
-      const typeLabel = "Invoice";
+      const root = ReactDOM.createRoot(container);
+      root.render(
+        <InvoiceTemplate 
+          record={record}
+          currency={currency}
+          numberToWords={numberToWords}
+          formatDateDisplay={formatDateDisplay}
+          pdfNumber={pdfNumber}
+          computeItemTax={computeItemTax}
+          calculatedTotal={grandTotalCalc(record.items, record.discountPercent, record.roundOff)}
+        />
+      );
 
-      doc.setDrawColor(180);
-      doc.setLineWidth(1);
-      doc.roundedRect(20, 20, pageWidth - 40, doc.internal.pageSize.getHeight() - 40, 14, 14);
+      // Wait for React to finish rendering
+      await new Promise(resolve => setTimeout(resolve, 1000));
 
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(22);
-      doc.setTextColor(...titleRGB);
-      const titleW = doc.getTextWidth(typeLabel);
-      const titleY = margin + 8;
-      doc.text(typeLabel, (pageWidth - titleW) / 2, titleY);
-
-      const metaTop = titleY + 30;
-      let my = metaTop;
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(50, 50, 50);
-      doc.text(`${typeLabel} No.`, margin, my);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text(record.number, margin + 90, my);
-      my += 22;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.text(`${typeLabel} Date`, margin, my);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text(formatDateDisplay(record.date), margin + 90, my);
-
-      try {
-        const logoUrl = "/logo.png";
-        const res = await fetch(logoUrl);
-        if (res.ok) {
-          const blob = await res.blob();
-          const dataUrl = await new Promise((resolve) => {
-            const fr = new FileReader();
-            fr.onload = () => resolve(fr.result);
-            fr.readAsDataURL(blob);
-          });
-          doc.addImage(dataUrl, "PNG", pageWidth - margin - 150, metaTop - 6, 150, 55);
-        }
-      } catch {}
-
-      let y = metaTop + 60;
-      const boxPad = 28, boxGap = 20;
-      const boxW = (usableWidth - boxGap) / 2;
-      const measureBox = (obj) => {
-        let h = 13 + 16;
-        const lines = doc.splitTextToSize(obj.address || "", boxW - boxPad * 2);
-        h += lines.length * 13;
-        if (obj.email) h += 13;
-        if (obj.phone) h += 13;
-        return h;
-      };
-      const fromH = measureBox(record.from);
-      const toH = measureBox(record.to);
-      const finalH = Math.max(fromH, toH) + 46;
-      doc.setDrawColor(210);
-      doc.roundedRect(margin, y, boxW, finalH, 10, 10);
-      doc.roundedRect(margin + boxW + boxGap, y, boxW, finalH, 10, 10);
-
-      let fy = y + boxPad, fx = margin + boxPad;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text("Invoice From", fx, fy);
-      fy += 18;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10.5);
-      doc.text(record.from.name || "-", fx, fy);
-      fy += 16;
-      doc.setFontSize(10);
-      const fLines = doc.splitTextToSize(record.from.address || "", boxW - boxPad * 2);
-      doc.text(fLines, fx, fy);
-      fy += fLines.length * 13 + 3;
-      if (record.from.email) {
-        doc.setFont("helvetica", "bold");
-        doc.text("Email:", fx, fy);
-        doc.setFont("helvetica", "normal");
-        doc.text(record.from.email, fx + 38, fy);
-        fy += 14;
-      }
-      if (record.from.phone) {
-        doc.setFont("helvetica", "bold");
-        doc.text("Phone No.:", fx, fy);
-        doc.setFont("helvetica", "normal");
-        doc.text(record.from.phone, fx + 60, fy);
-        fy += 14;
-      }
-
-      let ty = y + boxPad, tx = fx + boxW + boxGap;
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.text("Invoice For", tx, ty);
-      ty += 18;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10.5);
-      doc.text(record.to.name || "-", tx, ty);
-      ty += 16;
-      const tLines = doc.splitTextToSize(record.to.address || "", boxW - boxPad * 2);
-      doc.text(tLines, tx, ty);
-      ty += tLines.length * 13 + 3;
-      if (record.to.email) {
-        doc.setFont("helvetica", "bold");
-        doc.text("Email:", tx, ty);
-        doc.setFont("helvetica", "normal");
-        doc.text(record.to.email, tx + 38, ty);
-        ty += 14;
-      }
-      if (record.to.phone) {
-        doc.setFont("helvetica", "bold");
-        doc.text("Phone No.:", tx, ty);
-        doc.setFont("helvetica", "normal");
-        doc.text(record.to.phone, tx + 60, ty);
-        ty += 14;
-      }
-
-      y = y + finalH + 28;
-      const colW = {
-        sl: 55,
-        item: usableWidth * 0.28,
-        amt: usableWidth * 0.15,
-        gst: usableWidth * 0.07,
-        sgst: usableWidth * 0.12,
-        cgst: usableWidth * 0.12,
-        total: usableWidth * 0.14,
-      };
-      const headerHeight = 38;
-      doc.setFillColor(...headerColor);
-      doc.roundedRect(margin, y, usableWidth, headerHeight, 14, 14, "F");
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(11);
-      doc.setTextColor(255, 255, 255);
-      const headerY = y + 25;
-      let hx = margin;
-      [
-        ["Sl", colW.sl], ["Item", colW.item], ["Amount", colW.amt],
-        ["GST", colW.gst], ["SGST", colW.sgst], ["CGST", colW.cgst], ["Total", colW.total],
-      ].forEach(([t, w]) => {
-        doc.text(t, hx + w / 2, headerY, { align: "center" });
-        hx += w;
+      const doc = new jsPDF({
+        orientation: 'p',
+        unit: 'pt',
+        format: 'a4',
       });
 
-      const bodyY = y + headerHeight + 4;
-      const tableRows = [];
-      (record.items || []).forEach((it, i) => {
-        const t = computeItemTax(it.amount, it.gstPercent);
-        tableRows.push([
-          String(i + 1).padStart(2, "0"),
-          it.name,
-          pdfNumber(it.amount),
-          it.gstPercent ? `${it.gstPercent}%` : "-",
-          it.gstPercent ? pdfNumber(t.sgst) : "-",
-          it.gstPercent ? pdfNumber(t.cgst) : "-",
-          it.gstPercent ? pdfNumber(t.total) : pdfNumber(it.amount),
-        ]);
-        if (it.description) tableRows.push(["", it.description, "", "", "", "", ""]);
-      });
-
-      autoTable(doc, {
-        startY: bodyY,
-        body: tableRows,
-        theme: "plain",
-        margin: { left: margin, right: margin },
-        tableWidth: usableWidth,
-        styles: { fontSize: 10, textColor: [55, 55, 55], cellPadding: { top: 4, bottom: 3, left: 6, right: 6 }, valign: "middle" },
-        columnStyles: {
-          0: { cellWidth: colW.sl, halign: "center" },
-          1: { cellWidth: colW.item },
-          2: { cellWidth: colW.amt, halign: "center" },
-          3: { cellWidth: colW.gst, halign: "center" },
-          4: { cellWidth: colW.sgst, halign: "center" },
-          5: { cellWidth: colW.cgst, halign: "center" },
-          6: { cellWidth: colW.total, halign: "center" },
+      // Use jsPDF's native html method
+      await doc.html(container.firstChild, {
+        callback: function (pdf) {
+          pdf.save(`${record.number || "invoice"}.pdf`);
+          root.unmount();
+          document.body.removeChild(container);
+          showToast("PDF Downloaded");
         },
-        didParseCell: (data) => {
-          if (data.row.index % 2 === 1 && data.column.index === 1) {
-            data.cell.styles.fontSize = 8;
-            data.cell.styles.textColor = [120, 120, 120];
-          }
-        },
+        x: 0,
+        y: 0,
+        width: 595.28,
+        windowWidth: 800,
+        autoPaging: false // Prevent extra empty page
       });
-
-      const bottom = doc.lastAutoTable.finalY;
-      doc.setDrawColor(180);
-      doc.roundedRect(margin, y, usableWidth, bottom - y, 14, 14);
-
-      const wordsY = bottom + 28;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(10);
-      doc.setTextColor(100, 100, 100);
-      doc.text("Total amount in words", margin, wordsY);
-
-      const grand = safeNum(grandTotalCalc(record.items, record.discountPercent, record.roundOff));
-      const words = numberToWords(Math.round(grand));
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(40, 40, 40);
-      doc.text(doc.splitTextToSize(words, usableWidth * 0.6), margin, wordsY + 16);
-
-      const summaryW = 210;
-      const summaryX = pageWidth - margin - summaryW;
-      let sy = wordsY - 6;
-      doc.setFillColor(245, 247, 249);
-      doc.roundedRect(summaryX, sy, summaryW, 150, 14, 14, "F");
-      sy += 22;
-
-      const gstTotal = safeNum(totalGST(record.items));
-      const discountVal = safeNum(-((subtotalItems(record.items) + gstTotal) * (Number(record.discountPercent || 0) / 100)));
-      const roundDiff = record.roundOff ? safeNum(Math.round(grand) - grand) : 0;
-
-      const summaryRow = (label, value, red = false) => {
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        doc.setTextColor(80, 80, 80);
-        doc.text(label, summaryX + 12, sy);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(red ? 255 : 40, red ? 0 : 40, red ? 0 : 40);
-        doc.text(pdfNumber(value), summaryX + summaryW - 14, sy, { align: "right" });
-        sy += 16;
-      };
-
-      summaryRow("Amount", safeNum(subtotalItems(record.items)));
-      summaryRow("CGST", gstTotal / 2);
-      summaryRow("SGST", gstTotal / 2);
-      if (discountVal !== 0) summaryRow(`Discount (${record.discountPercent}%)`, discountVal, true);
-      summaryRow("Round Off", roundDiff, true);
-
-      doc.setFontSize(12);
-      doc.setTextColor(40, 40, 40);
-      doc.text("Total Amount", summaryX + 12, sy + 6);
-      doc.text(pdfNumber(grand), summaryX + summaryW - 14, sy + 6, { align: "right" });
-
-      doc.save(filename || `${record.number}.pdf`);
-      showToast("PDF downloaded");
     } catch (err) {
-      console.error("PDF ERROR:", err);
-      showToast("PDF failed");
+      console.error("PDF Error:", err);
+      showToast("Failed to generate PDF");
     }
   };
 
+
   const handleBackendPrint = (record, destination, options) => {
-    showToast(destination === "pdf" ? "Saving PDF..." : "Printing...");
+    if (destination === "pdf") {
+      generatePDF(record);
+    } else {
+      showToast("Printing...");
+      // For actual printing, we would ideally use a similar approach or window.print()
+      // But for now, we'll focus on the user's request for PDF download consistency.
+      generatePDF(record); 
+    }
   };
 
   const openAdd = () => {
@@ -956,7 +763,7 @@ const Invoice = ({ showToast }) => {
                       <button onClick={() => { setInvoiceForm({ ...r }); setShowInvoiceForm(true); }}><FaEdit /></button>
                     )}
                     {user?.role === "admin" && (
-                      <button onClick={() => deleteRecord(r._id)}><FaTrash /></button>
+                      <button onClick={() => deleteRecord(r._id)} className="text-red-500 hover:text-red-700 transition-colors"><FaTrash /></button>
                     )}
                   </td>
                 </tr>
@@ -1051,7 +858,7 @@ const Invoice = ({ showToast }) => {
           record={previewRecord}
           onClose={() => setPreviewOpen(false)}
           onEdit={() => { setPreviewOpen(false); setInvoiceForm({ ...previewRecord }); setShowInvoiceForm(true); }}
-          onDownload={() => generatePDF_withAutoTable(previewRecord, `${previewRecord.number || "invoice"}.pdf`)}
+          onDownload={() => generatePDF(previewRecord)}
           onPrint={() => { setSelectedRecord(previewRecord); setShowPrintDialog(true); }}
         />
       )}
@@ -1257,63 +1064,16 @@ function PreviewModal({ refNode, record, onClose, onEdit, onDownload, onPrint })
             <button onClick={onPrint} className="p-2 hover:bg-gray-100 rounded"><FaPrint className="text-[#345261]" /></button>
             <button onClick={onClose} className="p-2 rounded hover:bg-gray-100 text-red-500">✕</button>
           </div>
-          <div className="border p-6 rounded-lg bg-white">
-            <h1 className="text-2xl font-semibold text-[#345261] text-center uppercase tracking-wide mb-4">Invoice</h1>
-            <div className="flex justify-between items-start border-b pb-3 mb-5">
-              <div className="text-sm">
-                <div className="mb-1"><span className="text-slate-500 text-xs">Invoice No.:</span><span className="ml-1 font-medium">{record.number}</span></div>
-                <div><span className="text-slate-500 text-xs">Invoice Date:</span><span className="ml-1 font-medium">{formatDateDisplay(record.date)}</span></div>
-              </div>
-              <img src="/logo.png" alt="Company Logo" className="h-16 w-60 object-contain border rounded" style={{ padding: '15px' }} />
-            </div>
-            <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
-              <div className="border rounded-xl p-4 bg-white shadow-sm">
-                <h3 className="font-semibold mb-2 text-[#345261]">Invoice From</h3>
-                <p className="font-medium">{record.from?.name}</p><br/><p>{record.from?.address}</p><br/><p><strong>Email:</strong> {record.from?.email}</p><br/><p><strong>Phone:</strong> {record.from?.phone}</p>
-              </div>
-              <div className="border rounded-xl p-4 bg-white shadow-sm">
-                <h3 className="font-semibold mb-2 text-[#345261]">Invoice For</h3>
-                <p className="font-medium">{record.to?.name}</p><br/><p>{record.to?.address}</p><br/><p><strong>Email:</strong> {record.to?.email}</p><br/><p><strong>Phone:</strong> {record.to?.phone}</p>
-              </div>
-            </div>
-            <div className="border rounded-2xl overflow-hidden text-sm mb-6">
-              <div className="grid grid-cols-[0.6fr_3fr_1.5fr_1fr_1fr_1fr_1.6fr] text-center">
-                <div className="bg-[#345261] text-white px-4 py-2 font-medium">Sl. No.</div><div className="bg-[#345261] text-white px-4 py-2 text-left font-medium">Item</div><div className="bg-[#345261] text-white px-4 py-2 font-medium">Amount</div><div className="bg-[#345261] text-white px-4 py-2 font-medium">GST</div><div className="bg-[#345261] text-white px-4 py-2 font-medium">CGST</div><div className="bg-[#345261] text-white px-4 py-2 font-medium">SGST</div><div className="bg-[#345261] text-white px-4 py-2 font-medium">Total</div>
-                {(record.items || []).map((it, idx) => {
-                  const t = computeItemTax(it.amount, it.gstPercent);
-                  return (
-                    <React.Fragment key={idx}>
-                      <div className="px-4 py-2">{String(idx + 1).padStart(2, "0")}</div>
-                      <div className="px-4 py-2 text-left"><p className="font-medium">{it.name}</p>{it.description && <p className="text-xs text-gray-500">{it.description}</p>}</div>
-                      <div className="px-4 py-2">{Number(it.amount || 0).toFixed(2)}</div>
-                      <div className="px-4 py-2">{it.gstPercent ? `${it.gstPercent}%` : "–"}</div>
-                      <div className="px-4 py-2">{it.gstPercent ? currency(t.cgst) : "–"}</div>
-                      <div className="px-4 py-2">{it.gstPercent ? currency(t.sgst) : "–"}</div>
-                      <div className="px-4 py-2">{it.gstPercent ? currency(t.total) : Number(it.amount).toFixed(2)}</div>
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-            </div>
-            <div className="grid grid-cols-12 gap-4 items-start">
-              <div className="col-span-8">
-                <p className="text-gray-500 text-sm">Total amount in words</p>
-                <p className="text-base font-semibold mt-2 text-[#345261]">{numberToWords(Math.round(grandTotalCalc(record.items, record.discountPercent, record.roundOff)))}</p>
-              </div>
-              <div className="col-span-4"><div className="border rounded-xl p-4 text-sm bg-gray-50">
-                <div className="flex justify-between mb-1"><span>Amount</span><span>{currency(subtotalItems(record.items))}</span></div>
-                <div className="flex justify-between mb-1"><span>CGST</span><span>{currency(totalGST(record.items) / 2)}</span></div>
-                <div className="flex justify-between mb-1"><span>SGST</span><span>{currency(totalGST(record.items) / 2)}</span></div>
-                {record.discountPercent > 0 && <div className="flex justify-between mb-1"><span>Discount ({record.discountPercent}%)</span><span className="text-red-500">- {currency((subtotalItems(record.items) + totalGST(record.items)) * (Number(record.discountPercent || 0) / 100))}</span></div>}
-                <div className="border-t pt-2 mt-2 flex justify-between font-semibold text-black text-base"><span>Total Amount</span><span>{currency(grandTotalCalc(record.items, record.discountPercent, record.roundOff))}</span></div>
-              </div></div>
-            </div>
-            {record.additionalInfo && (
-              <div className="mt-6 border rounded-xl p-4 bg-white">
-                <h3 className="font-semibold text-[#345261] mb-2">Additional Info</h3>
-                <p className="text-sm text-gray-700">{record.additionalInfo}</p>
-              </div>
-            )}
+          <div className="flex justify-center bg-gray-100 rounded-lg p-4 overflow-x-auto">
+            <InvoiceTemplate 
+              record={record}
+              currency={currency}
+              numberToWords={numberToWords}
+              formatDateDisplay={formatDateDisplay}
+              pdfNumber={pdfNumber}
+              computeItemTax={computeItemTax}
+              calculatedTotal={grandTotalCalc(record.items, record.discountPercent, record.roundOff)}
+            />
           </div>
         </div>
       </div>
