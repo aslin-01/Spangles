@@ -227,24 +227,17 @@ const InvoiceTemplate = ({
                 )}
               </div>
 
-              {/* Note Section (Only on Last Page) - Premium Redesigned Layout */}
+              {/* Note Section (Only on Last Page) - Premium Minimalist Layout */}
               {isLastPage && (
-                <div className="mt-6 relative z-10 px-2">
-                  <div className="bg-[#f8fafc] border-l-4 border-[#345261] rounded-r-xl py-2.5 px-2">
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-2 shrink-0">
-                        <svg className="w-4 h-4 text-[#345261]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                        <span className="text-[12px] font-bold text-[#345261] uppercase tracking-[0.2em] whitespace-nowrap">Notes & Terms :</span>
-                      </div>
-                      <div className="text-[13px] text-gray-700 leading-relaxed">
-                        {showAdditionalInfo && additionalInfo ? (
-                          <p className="whitespace-pre-line">{additionalInfo}</p>
-                        ) : (
-                          <p className="text-gray-400 italic">No additional notes provided.</p>
-                        )}
-                      </div>
+                <div className="mt-12 relative z-10 px-8">
+                  <div className="pt-2 flex flex-col gap-4">
+                    <h4 className="text-[16px] font-black text-[#345261] uppercase tracking-[0.25em]">Note:</h4>
+                    <div className="text-[14px] text-gray-700 leading-[1.8] font-medium max-w-[700px]">
+                      {showAdditionalInfo && additionalInfo ? (
+                        <div className="whitespace-pre-line">{additionalInfo}</div>
+                      ) : (
+                        <p className="text-gray-400 italic m-0">No additional notes provided for this invoice.</p>
+                      )}
                     </div>
                   </div>
                 </div>
