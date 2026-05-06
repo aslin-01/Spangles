@@ -13,22 +13,48 @@
   -ms-overflow-style: none;
 }
 
-/* Custom scrollbar styling to reduce width */
+/* Custom scrollbar styling */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 0 !important;
+  height: 0 !important;
+  display: none !important;
 }
 
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
+html {
+  scrollbar-width: none !important;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
+html::after {
+  content: "";
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  background: #2a3d45;
+  z-index: 99999;
+  transform-origin: top;
+  transform: scaleY(0);
+  animation: scroll-v auto linear;
+  animation-timeline: scroll();
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+@keyframes scroll-v {
+  to {
+    transform: scaleY(1);
+  }
+}
+
+::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent !important;
 }
 
 
+/* Firefox Support */

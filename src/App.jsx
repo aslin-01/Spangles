@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate, useOutletContext } from "react-router-dom";
+import React, { useEffect } from "react";
 
 import Login from "./login/Login";
 import DashboardLayout from "./layout/DashboardLayout";
@@ -7,7 +8,7 @@ import DashboardLayout from "./layout/DashboardLayout";
 import JobPost from "./job/JobPost";
 import Applicants from "./applicants/Applicants";
 import Gallery from "./gallery/Gallery";
-import Blogs from "./blogs/Blogs"; 
+import Blogs from "./blogs/Blogs";
 import UserAccess from "./useraccess/UserAccess";
 import Enquiries from "./enquiries/Enquiries";
 import Client from "./client/Client";
@@ -28,6 +29,18 @@ const WithToast = ({ Component }) => {
 };
 
 export default function App() {
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrolled = window.scrollY;
+      const height = document.documentElement.scrollHeight - window.innerHeight;
+      const percentage = (scrolled / height) * 100;
+      document.documentElement.style.setProperty('--scroll-percent', `${percentage}%`);
+    };
+    window.addEventListener('scroll', handleScroll);
+    handleScroll();
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
@@ -44,7 +57,7 @@ export default function App() {
         >
           {/* Default dashboard redirect handled in DashboardLayout */}
           <Route path="dashboard" element={null} />
-          
+
           <Route path="applicants" element={<WithToast Component={Applicants} />} />
           <Route path="enquiries" element={<WithToast Component={Enquiries} />} />
           <Route path="job" element={<JobPost />} />

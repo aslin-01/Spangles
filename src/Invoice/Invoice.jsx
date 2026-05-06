@@ -139,7 +139,7 @@ function PrintDialog({ record, onClose, onPrint }) {
       <div className="fixed inset-0 z-50 flex justify-end items-end">
         <div className="bg-white w-full max-w-sm rounded-2xl shadow-xl border border-gray-200 p-6 max-h-[90vh] overflow-y-auto">
           <h2 className="text-lg font-semibold mb-4">Print Document</h2>
-          
+
           <div className="mb-4">
             <label className="block text-sm font-medium mb-2">Destination</label>
             <div className="flex gap-4">
@@ -174,7 +174,7 @@ function PrintDialog({ record, onClose, onPrint }) {
                   type="radio"
                   value="all"
                   checked={true}
-                  onChange={() => {}}
+                  onChange={() => { }}
                   className="mr-2"
                 />
                 All
@@ -272,7 +272,7 @@ function PrintDialog({ record, onClose, onPrint }) {
                 <input
                   type="checkbox"
                   checked={options.headersAndFooters}
-                  onChange={(e) => setOptions(prev => ({...prev, headersAndFooters: e.target.checked}))}
+                  onChange={(e) => setOptions(prev => ({ ...prev, headersAndFooters: e.target.checked }))}
                   className="mr-2"
                 />
                 Headers and footers
@@ -281,7 +281,7 @@ function PrintDialog({ record, onClose, onPrint }) {
                 <input
                   type="checkbox"
                   checked={options.backgroundGraphics}
-                  onChange={(e) => setOptions(prev => ({...prev, backgroundGraphics: e.target.checked}))}
+                  onChange={(e) => setOptions(prev => ({ ...prev, backgroundGraphics: e.target.checked }))}
                   className="mr-2"
                 />
                 Background graphics
@@ -345,7 +345,7 @@ const Invoice = ({ showToast }) => {
   const [showPrintDialog, setShowPrintDialog] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [clients, setClients] = useState([]);
-  
+
   const [currentPage, setCurrentPage] = useState(1);
   const [recordsPerPage, setRecordsPerPage] = useState(50);
   const [searchTerm, setSearchTerm] = useState("");
@@ -404,7 +404,7 @@ const Invoice = ({ showToast }) => {
       const customerAddress = (to.address || '').toLowerCase();
       const date = formatDateDisplay(record.date)?.toLowerCase() || '';
       const searchTermLower = term.toLowerCase();
-      
+
       return (
         slNo.includes(searchTermLower) ||
         number.toLowerCase().includes(searchTermLower) ||
@@ -416,7 +416,7 @@ const Invoice = ({ showToast }) => {
         date.includes(searchTermLower)
       );
     });
-    
+
     setFilteredRecords(filtered);
     setCurrentPage(1);
   };
@@ -580,7 +580,7 @@ const Invoice = ({ showToast }) => {
   const saveRecord = async (form) => {
     if (!validateForm(form)) return;
     try {
-      const toInsert = { 
+      const toInsert = {
         ...form,
         showAdditionalInfo: (form.showAdditionalInfo || false),
         additionalInfo: (form.additionalInfo || "")
@@ -599,15 +599,15 @@ const Invoice = ({ showToast }) => {
 
       const endpoint = `${API_BASE}/api/invoices${form._id ? `/${form._id}` : ''}`;
       const method = form._id ? "PUT" : "POST";
-      
+
       const res = await fetch(endpoint, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      
+
       if (!res.ok) throw new Error(form._id ? "Update failed" : "Save failed");
-      
+
       await fetchInvoices();
       setShowInvoiceForm(false);
       setInvoiceForm(emptyRecord("invoice", invoices));
@@ -631,7 +631,7 @@ const Invoice = ({ showToast }) => {
   const generatePDF = async (record) => {
     try {
       showToast("Generating Premium PDF...");
-      
+
       const container = document.createElement("div");
       container.style.position = "absolute";
       container.style.left = "-9999px";
@@ -640,7 +640,7 @@ const Invoice = ({ showToast }) => {
 
       const root = ReactDOM.createRoot(container);
       root.render(
-        <InvoiceTemplate 
+        <InvoiceTemplate
           record={record}
           currency={currency}
           numberToWords={numberToWords}
@@ -672,7 +672,7 @@ const Invoice = ({ showToast }) => {
         y: 0,
         width: 595.28,
         windowWidth: 800,
-        autoPaging: false // Prevent extra empty page
+        autoPaging: 'text' // Enable auto paging for multiple pages
       });
     } catch (err) {
       console.error("PDF Error:", err);
@@ -688,7 +688,7 @@ const Invoice = ({ showToast }) => {
       showToast("Printing...");
       // For actual printing, we would ideally use a similar approach or window.print()
       // But for now, we'll focus on the user's request for PDF download consistency.
-      generatePDF(record); 
+      generatePDF(record);
     }
   };
 
@@ -801,9 +801,8 @@ const Invoice = ({ showToast }) => {
                     key={i}
                     onClick={() => typeof num === "number" && setCurrentPage(num)}
                     disabled={num === "..."}
-                    className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-semibold transition-all ${
-                      currentPage === num ? "bg-[#345261] text-white shadow-md transform scale-105" : num === "..." ? "cursor-default text-gray-400" : "hover:bg-gray-50 text-gray-600 active:bg-gray-100"
-                    }`}
+                    className={`w-10 h-10 flex items-center justify-center rounded-full text-sm font-semibold transition-all ${currentPage === num ? "bg-[#345261] text-white shadow-md transform scale-105" : num === "..." ? "cursor-default text-gray-400" : "hover:bg-gray-50 text-gray-600 active:bg-gray-100"
+                      }`}
                   >
                     {num}
                   </button>
@@ -931,10 +930,10 @@ function FormModal({ title, form, setForm, onClose, onSave, addItem, updateItem,
             <div className="border rounded-2xl p-4">
               <h3 className="text-[13px] font-semibold mb-2 text-[#23414a]">{title} For</h3>
               <div className="relative" ref={dropdownRef}>
-                <input 
-                  className="w-full border-b py-2 text-sm mb-2 px-1 focus:border-[#345261] outline-none" 
-                  placeholder="Client Business Name" 
-                  value={form.to.name} 
+                <input
+                  className="w-full border-b py-2 text-sm mb-2 px-1 focus:border-[#345261] outline-none"
+                  placeholder="Client Business Name"
+                  value={form.to.name}
                   onChange={(e) => {
                     const val = e.target.value;
                     setForm((p) => ({ ...p, to: { ...p.to, name: val } }));
@@ -944,7 +943,7 @@ function FormModal({ title, form, setForm, onClose, onSave, addItem, updateItem,
                 {showClientList && form.to.name.trim() && (
                   <div className="absolute z-50 w-full bg-white border border-gray-200 rounded-lg shadow-lg mt-1 max-h-48 overflow-y-auto">
                     {(() => {
-                      const filtered = clients.filter(c => 
+                      const filtered = clients.filter(c =>
                         (c.businessName || "").toLowerCase().startsWith(form.to.name.toLowerCase()) ||
                         (c.name || "").toLowerCase().startsWith(form.to.name.toLowerCase())
                       );
@@ -1023,7 +1022,7 @@ function FormModal({ title, form, setForm, onClose, onSave, addItem, updateItem,
               <div className="flex justify-between py-1"><span>CGST</span><span>{currency(totalGST(form.items || []) / 2)}</span></div>
               <div className="flex justify-between py-1"><span>SGST</span><span>{currency(totalGST(form.items || []) / 2)}</span></div>
               <div className="mt-2"><label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={!!form.showDiscount} onChange={(e) => setForm((prev) => ({ ...prev, showDiscount: e.target.checked }))} />+ Discount on total</label>
-              {form.showDiscount && <div className="mt-2 flex items-center gap-2"><label className="text-xs">Discount (%)</label><input type="number" className="border py-1 px-2 text-[12px]" value={form.discountPercent} onChange={(e) => setForm((prev) => ({ ...prev, discountPercent: e.target.value }))} /></div>}</div>
+                {form.showDiscount && <div className="mt-2 flex items-center gap-2"><label className="text-xs">Discount (%)</label><input type="number" className="border py-1 px-2 text-[12px]" value={form.discountPercent} onChange={(e) => setForm((prev) => ({ ...prev, discountPercent: e.target.value }))} /></div>}</div>
               <div className="flex justify-between items-center py-2 mt-2"><span>Round Off</span><input type="checkbox" checked={!!form.roundOff} onChange={(e) => setForm((prev) => ({ ...prev, roundOff: e.target.checked }))} /></div>
               <div className="border-t mt-2 pt-2 text-right"><div className="text-xs">Total Amount</div><div className="text-base font-semibold">{currency(grandTotalCalc(form.items || [], form.discountPercent, form.roundOff))}</div></div>
             </div></div>
@@ -1065,7 +1064,7 @@ function PreviewModal({ refNode, record, onClose, onEdit, onDownload, onPrint })
             <button onClick={onClose} className="p-2 rounded hover:bg-gray-100 text-red-500">✕</button>
           </div>
           <div className="flex justify-center bg-gray-100 rounded-lg p-4 overflow-x-auto">
-            <InvoiceTemplate 
+            <InvoiceTemplate
               record={record}
               currency={currency}
               numberToWords={numberToWords}
