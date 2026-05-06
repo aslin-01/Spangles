@@ -653,6 +653,8 @@ const Invoice = ({ showToast }) => {
 
       // Wait for React to finish rendering
       await new Promise(resolve => setTimeout(resolve, 1000));
+      const expectedPageCount =
+        container.querySelectorAll('[data-invoice-page="true"]').length || 1;
 
       const doc = new jsPDF({
         orientation: 'p',
@@ -663,6 +665,9 @@ const Invoice = ({ showToast }) => {
       // Use jsPDF's native html method
       await doc.html(container.firstChild, {
         callback: function (pdf) {
+          while (pdf.getNumberOfPages() > expectedPageCount) {
+            pdf.deletePage(pdf.getNumberOfPages());
+          }
           pdf.save(`${record.number || "invoice"}.pdf`);
           root.unmount();
           document.body.removeChild(container);
@@ -672,7 +677,7 @@ const Invoice = ({ showToast }) => {
         y: 0,
         width: 595.28,
         windowWidth: 800,
-        autoPaging: 'text' // Enable auto paging for multiple pages
+        autoPaging: 'slice' // Prevent trailing blank page while keeping multipage output
       });
     } catch (err) {
       console.error("PDF Error:", err);

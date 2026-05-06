@@ -1,7 +1,26 @@
 import React from "react";
 
-const InvoiceTemplate = ({ record, currency, numberToWords, formatDateDisplay, pdfNumber, computeItemTax, calculatedTotal }) => {
-  const { from, to, items, number, date, discountPercent, showDiscount, roundOff, additionalInfo, showAdditionalInfo } = record;
+const InvoiceTemplate = ({
+  record,
+  currency,
+  numberToWords,
+  formatDateDisplay,
+  pdfNumber,
+  computeItemTax,
+  calculatedTotal,
+}) => {
+  const {
+    from,
+    to,
+    items,
+    number,
+    date,
+    discountPercent,
+    showDiscount,
+    roundOff,
+    additionalInfo,
+    showAdditionalInfo,
+  } = record;
 
   const getTaxDetails = (item) => computeItemTax(item.amount, item.gstPercent);
 
@@ -29,13 +48,14 @@ const InvoiceTemplate = ({ record, currency, numberToWords, formatDateDisplay, p
       }
 
       if (item.description) {
-        const lines = item.description.split('\n').length;
+        const lines = item.description.split("\n").length;
         // Each description line roughly takes 18px. We add buffer for wrapping.
         rowHeight += lines * 20;
 
         // If a single line is very long, it will wrap. We estimate this too.
         if (item.description.length / 50 > lines) {
-          rowHeight += (Math.floor(item.description.length / 50) - lines + 1) * 18;
+          rowHeight +=
+            (Math.floor(item.description.length / 50) - lines + 1) * 18;
         }
       }
 
@@ -63,7 +83,7 @@ const InvoiceTemplate = ({ record, currency, numberToWords, formatDateDisplay, p
   // Calculate starting index for each chunk to keep Serial Numbers (S.NO) correct
   const chunkStartingIndices = [];
   let cumulativeIndex = 0;
-  itemChunks.forEach(chunk => {
+  itemChunks.forEach((chunk) => {
     chunkStartingIndices.push(cumulativeIndex);
     cumulativeIndex += chunk.length;
   });
@@ -76,35 +96,56 @@ const InvoiceTemplate = ({ record, currency, numberToWords, formatDateDisplay, p
 
         return (
           <div
+            data-invoice-page="true"
             key={pageIndex}
             className="w-[800px] mx-auto bg-white p-10 text-gray-800 relative overflow-hidden"
             style={{
               minHeight: "1132px", // Precise A4 height
-              fontFamily: "'Inter', 'Roboto', sans-serif",
-              pageBreakAfter: "always",
+              fontFamily: "'Montserrat', sans-serif",
+              pageBreakAfter: isLastPage ? "auto" : "always",
+              overflow: "hidden",
             }}
           >
-
             <div className="relative z-10 pt-4">
               {/* Company Header */}
               <div className="text-center mb-16 flex justify-center">
-                <img src="/logo.png" alt="Spanglez WebX Logo" className="h-16 object-contain" />
+                <img
+                  src="/logo.png"
+                  alt="Spanglez WebX Logo"
+                  className="h-16 object-contain"
+                />
               </div>
 
               {/* Invoice Details (Only on First Page) */}
               {isFirstPage && (
                 <div className="flex justify-between items-start mb-10 px-2 min-h-[160px]">
                   <div className="space-y-2">
-                    <h2 className="text-xl font-bold tracking-widest text-[#345261] mb-6">INVOICE</h2>
-                    <p className="text-medium font-bold text-gray-700">Invoice No: <span className="font-normal text-gray-600 ml-2">{number}</span></p>
-                    <p className="text-medium font-bold text-gray-700">Date Issued: <span className="font-normal text-gray-600 ml-2">{formatDateDisplay(date)}</span></p>
+                    <h2 className="text-xl font-bold tracking-widest text-[#345261] mb-6">
+                      INVOICE
+                    </h2>
+                    <p className="text-medium font-bold text-gray-700">
+                      Invoice No:{" "}
+                      <span className="font-normal text-gray-600 ml-2">
+                        {number}
+                      </span>
+                    </p>
+                    <p className="text-medium font-bold text-gray-700">
+                      Date Issued:{" "}
+                      <span className="font-normal text-gray-600 ml-2">
+                        {formatDateDisplay(date)}
+                      </span>
+                    </p>
                   </div>
 
                   <div className="text-left pr-12 min-w-[170px]">
-                    <h2 className="text-medium font-bold text-gray-700 mb-3">Issued to:</h2>
+                    <h2 className="text-medium font-bold text-gray-700 mb-3">
+                      Issued to:
+                    </h2>
                     <div className="text-sm text-gray-600 font-medium leading-relaxed">
                       <p className="font-bold text-gray-800">{to.name}</p>
-                      {to.address && <p className="whitespace-pre-line">{to.address}</p>}
+                      {to.address && (
+                        <p className="whitespace-pre-line">{to.address}</p>
+                      )}
                       {to.phone && <p>{to.phone}</p>}
                       {to.email && <p>{to.email}</p>}
                     </div>
@@ -119,31 +160,50 @@ const InvoiceTemplate = ({ record, currency, numberToWords, formatDateDisplay, p
               >
                 {/* Table Header */}
                 <div className="grid grid-cols-[100px_1fr_200px] bg-[#345261] text-white text-[15px] font-bold tracking-widest uppercase relative z-10 border-b-2 border-gray-700 pb-4">
-                  <div className="py-3 flex items-center justify-center border-r border-gray-700 leading-none">S.NO</div>
-                  <div className="py-3 flex items-center justify-center border-r border-gray-700 leading-none">DESCRIPTION</div>
-                  <div className="py-3 flex items-center justify-center leading-none">PRICE</div>
+                  <div className="py-3 flex items-center justify-center border-r border-gray-700 leading-none">
+                    S.NO
+                  </div>
+                  <div className="py-3 flex items-center justify-center border-r border-gray-700 leading-none">
+                    DESCRIPTION
+                  </div>
+                  <div className="py-3 flex items-center justify-center leading-none">
+                    PRICE
+                  </div>
                 </div>
 
                 <div className="flex-1 p-0 z-10 relative">
-
                   {chunk.map((item, index) => {
                     const tax = getTaxDetails(item);
                     const globalIndex = chunkStartingIndices[pageIndex] + index;
                     return (
-                      <div key={index} className="grid grid-cols-[100px_1fr_200px] gap-0 min-h-[50px]">
-                        <div className="text-sm text-gray-700 text-center font-bold px-2 py-3 break-words border-r border-gray-700 flex items-center justify-center">{globalIndex + 1}</div>
+                      <div
+                        key={index}
+                        className="grid grid-cols-[100px_1fr_200px] gap-0 min-h-[50px]"
+                      >
+                        <div className="text-sm text-gray-700 text-center font-bold px-2 py-3 break-words border-r border-gray-700 flex items-start justify-center">
+                          {globalIndex + 1}
+                        </div>
                         <div className="text-sm text-gray-800 px-6 py-3 flex justify-center items-center overflow-hidden border-r border-gray-700">
                           <div className="w-full text-center break-words">
-                            <div className="font-bold text-gray-800 uppercase tracking-wide leading-tight">{item.name}</div>
-                            {item.description && <div className="text-[12px] text-black mt-1 uppercase tracking-wider whitespace-pre-line leading-relaxed">{item.description}</div>}
+                            <div className="font-bold text-gray-800 uppercase tracking-wide leading-tight">
+                              {item.name}
+                            </div>
+                            {item.description && (
+                              <div className="text-[12px] text-black mt-1 uppercase tracking-wider whitespace-pre-line leading-relaxed">
+                                {item.description}
+                              </div>
+                            )}
                             {item.gstPercent && (
                               <div className="text-[12px] text-black mt-1 uppercase tracking-wider">
-                                INCL. GST ({item.gstPercent}%) - {currency(tax.gst)}
+                                INCL. GST ({item.gstPercent}%) -{" "}
+                                {currency(tax.gst)}
                               </div>
                             )}
                           </div>
                         </div>
-                        <div className="text-sm text-gray-800 text-center font-bold px-2 py-3 break-words flex items-center justify-center">{pdfNumber(tax.total)}</div>
+                        <div className="text-sm text-gray-800 text-center font-bold px-2 py-3 break-words flex items-center justify-center">
+                          {pdfNumber(tax.total)}
+                        </div>
                       </div>
                     );
                   })}
@@ -154,37 +214,37 @@ const InvoiceTemplate = ({ record, currency, numberToWords, formatDateDisplay, p
                   <div className="border-t-2 border-gray-700 grid grid-cols-[100px_1fr_200px] bg-white relative z-10">
                     <div className="border-r border-gray-700 py-2"></div>
                     <div className="text-end pr-8 border-r border-gray-700 py-2 flex items-center justify-end">
-                      <span className="text-[18px] font-bold tracking-widest uppercase text-[#345261]">TOTAL</span>
+                      <span className="text-[18px] font-bold tracking-widest uppercase text-[#345261]">
+                        TOTAL
+                      </span>
                     </div>
                     <div className="text-center py-2 flex items-center justify-center">
-                      <span className="text-sm font-bold text-black">{currency(finalTotal)}</span>
+                      <span className="text-sm font-bold text-black">
+                        {currency(finalTotal)}
+                      </span>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Note Section (Only on Last Page) - Moved outside the table box to remove borders */}
+              {/* Note Section (Only on Last Page) - Premium Redesigned Layout */}
               {isLastPage && (
-                <div className="mt-6 px-2 bg-white relative z-10">
-                  <div className="flex items-center">
-                    <p className="text-[16px] font-bold text-gray-700 mr-2 whitespace-nowrap">Note :</p>
-                    <div className="text-[12px] text-black font-medium leading-relaxed">
-                      {showAdditionalInfo && additionalInfo ? (
-                        additionalInfo.split('\n').map((line, i) => {
-                          const trimmedLine = line.trim();
-                          if (!trimmedLine) return <br key={i} />;
-                          const colonIndex = trimmedLine.indexOf(':');
-                          if (colonIndex !== -1 && colonIndex < 30) {
-                            return (
-                              <p key={i}>
-                                <span className="font-bold text-gray-700">{trimmedLine.substring(0, colonIndex + 1)}</span>
-                                {trimmedLine.substring(colonIndex + 1)}
-                              </p>
-                            );
-                          }
-                          return <p key={i}>{trimmedLine}</p>;
-                        })
-                      ) : ""}
+                <div className="mt-6 relative z-10 px-2">
+                  <div className="bg-[#f8fafc] border-l-4 border-[#345261] rounded-r-xl py-2.5 px-2">
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 shrink-0">
+                        <svg className="w-4 h-4 text-[#345261]" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        <span className="text-[12px] font-bold text-[#345261] uppercase tracking-[0.2em] whitespace-nowrap">Notes & Terms :</span>
+                      </div>
+                      <div className="text-[13px] text-gray-700 leading-relaxed">
+                        {showAdditionalInfo && additionalInfo ? (
+                          <p className="whitespace-pre-line">{additionalInfo}</p>
+                        ) : (
+                          <p className="text-gray-400 italic">No additional notes provided.</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -194,7 +254,7 @@ const InvoiceTemplate = ({ record, currency, numberToWords, formatDateDisplay, p
             {/* TOP RIGHT - EXACT MATCH TO BRANDING DESIGN */}
             <div className="absolute top-0 right-0 w-[300px] h-[500px] pointer-events-none z-0">
               {/* GRAY TRIANGLE (Top Corner) */}
-              <div 
+              <div
                 style={{
                   width: 0,
                   height: 0,
@@ -203,12 +263,12 @@ const InvoiceTemplate = ({ record, currency, numberToWords, formatDateDisplay, p
                   position: "absolute",
                   top: 0,
                   right: 0,
-                  zIndex: 1
-                }} 
+                  zIndex: 1,
+                }}
               />
               {/* DARK BLUE TRIANGLE (Rotated Version) */}
-              <div 
-                 style={{
+              <div
+                style={{
                   width: 0,
                   height: 0,
                   borderTop: "90px solid transparent",
@@ -217,17 +277,15 @@ const InvoiceTemplate = ({ record, currency, numberToWords, formatDateDisplay, p
                   position: "absolute",
                   top: 0,
                   right: 0,
-                  zIndex: 2
-                }} 
+                  zIndex: 2,
+                }}
               />
-           
             </div>
 
             {/* BOTTOM LEFT */}
             <div className="absolute bottom-0 left-0 w-[260px] h-[260px] pointer-events-none z-[9999]">
-              {/* LIGHT TRIANGLE (bottom-most corner cut) */}
               <div className="absolute bottom-0 left-0 w-[150px] h-[150px] bg-[#a6a6a6] rotate-45 -translate-x-[20px] translate-y-[110px] z-[2]" />
-              {/* DARK TRIANGLE (slightly higher & left) */}
+
               <div className="absolute bottom-0 left-0 w-[100px] h-[100px] bg-[#2f4858] rotate-45 -translate-x-[90px] translate-y-[20px] z-[1]" />
             </div>
           </div>
